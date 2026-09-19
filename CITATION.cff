@@ -1,0 +1,20 @@
+cff-version: 1.2.0
+message: "If you use this pipeline or its outputs, please cite it as below."
+title: "Rule vs. Exemplar Learning of Turkish Plural Allomorphy: dataset and nonce-item pipeline"
+type: software
+authors:
+  - family-names: Erkiraz
+    given-names: Buse
+  - family-names: Mojoudi
+    given-names: Niyousha
+date-released: 2026-09-19
+repository-code: "https://github.com/buseerkiraz/turkish-plural-allomorphy"
+license: MIT
+abstract: >
+  A data-processing pipeline that classifies Turkish nominals for plural
+  suffix allomorphy (-lar / -ler) from the TELL lexicon, isolates the Arabic
+  -At exception neighbourhood, audits it for transcription circularity,
+  codes a six-dimension binary feature matrix, and builds a screened
+  nonce-word test set, produced for the course "From Neurons to
+  Transformers: Cognitive Principles in AI Research" (Heidelberg University,
+  SoSe 2026).

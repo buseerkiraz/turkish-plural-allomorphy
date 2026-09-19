@@ -1,0 +1,220 @@
+# -*- coding: utf-8 -*-
+"""Shared phonological definitions and statistics for the Turkish plural study.
+
+Every script in this pipeline imports its phonology from here so that a change to
+a feature definition propagates everywhere instead of drifting between analyses.
+
+TELL transcription conventions used below
+-----------------------------------------
+vowels      a e i ɯ u o y ø
+length      ':' following a vowel
+laterals    'l' = clear/palatalised, 'ɫ' = dark/velarised
+dorsals     'c' = palatal k, 'ɟ' = palatal g, 'k' = velar k, 'g' = velar g
+affricate   'ʒ' (NOT 'c' -- this trips people up)
+"""
+import math
+import sys
+
+# The transcriptions printed by these scripts contain IPA (ɫ, ɟ, ɯ, ʃ). A Windows
+# console defaults to cp1252 and raises UnicodeEncodeError on the first one, which
+# kills the run. Force UTF-8 on the way out. Harmless everywhere else.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
+
+VOWELS = set("aeiɯuoyø")
+BACK_V = set("aɯou")
+FRONT_V = set("eiyø")
+HIGH_BACK = set("ɯu")          # the accusative/possessive suffix vowel, back
+HIGH_FRONT = set("iy")         # the accusative/possessive suffix vowel, front
+ROUND_V = set("uoyø")
+
+CLEAR_L = "l"
+DARK_L = "ɫ"
+LATERALS = {CLEAR_L, DARK_L}
+PALATAL_DORSAL = set("cɟ")
+VELAR_DORSAL = set("kg")
+DORSALS = PALATAL_DORSAL | VELAR_DORSAL
+PALATAL_C = PALATAL_DORSAL | {CLEAR_L}     # segments TELL marks as palatal
+VOICED_C = set("bdgɟvzʒʒʤdʒmnɾljɫ")
+
+# PALATAL_C is not safe to reuse as a model input feature, so this is not the
+# same set even though the name is similar.
+#
+# PALATAL_C (just above) includes clear 'l' because clear vs dark lateral
+# quality is articulatorily a palatal contrast. That is fine as an EXPLORATORY
+# candidate cue in Stage 02, which runs before the circularity audit exists.
+#
+# Stage 04 later finds that clear/dark lateral quality is not phonetic at all:
+# TELL uses it to mark harmony class, so it is unusable as model input (see
+# Stage 04's verdict and the "lateral is CLEAR" cue in Stage 02). Any dimension
+# computed AFTER that finding must not read lateral quality. This is that
+# dorsal-only set for Stage 06's D1 dimension.
+PALATAL_C_MODEL_SAFE = PALATAL_DORSAL
+
+# AT_CUE_CLASS and D2_ONSET overlap heavily but must not be merged.
+#
+# AT_CUE_CLASS is the Phase 0.5 finding: within /at/-final words, exceptions occur
+# essentially only when this class stands before the ending. It is a local
+# generalisation over one neighbourhood and includes the dorsals.
+AT_CUE_CLASS = {"a", "h"} | DORSALS
+#
+# D2_ONSET is the model input dimension. It is the narrower, dorsal-free version.
+# The dorsals are dropped here because lexicon-wide they are far too common
+# (16.4% of all items) to function as a cue, and the palatal ones are already
+# captured by D1. Using the wide class as a model dimension collapses the D1xD2
+# interaction; using the narrow one preserves it. See stage 06 output.
+D2_ONSET = VOWELS | {"h"}
+GUTTURAL_ONSET = AT_CUE_CLASS | VOWELS   # legacy alias: the widest variant
+
+JUNK_CHARS = "~#?_;@34/-"      # stray editorial marks in TELL citation fields
+
+
+# ----------------------------------------------------------------- strings
+def strip_length(s):
+    return s.replace(":", "")
+
+
+def vowels_of(s):
+    return [c for c in strip_length(s) if c in VOWELS]
+
+
+def last_vowel(s):
+    v = vowels_of(s)
+    return v[-1] if v else ""
+
+
+def backness(v):
+    if v in BACK_V:
+        return "back"
+    if v in FRONT_V:
+        return "front"
+    return ""
+
+
+def final_consonant(citation):
+    b = strip_length(citation)
+    return b[-1] if b and b[-1] not in VOWELS else ""
+
+
+def final_syllable(citation):
+    """From the segment before the last vowel to the end of the word.
+
+    This is deliberately crude (no real syllabifier) but it is the domain the
+    cue features are defined over, and it is defined for every word.
+    """
+    b = strip_length(citation)
+    idx = [i for i, c in enumerate(b) if c in VOWELS]
+    if not idx:
+        return b
+    prev = idx[-2] if len(idx) > 1 else -1
+    return b[prev + 1:]
+
+
+def pre_final_vowel(citation):
+    """The single segment immediately before the final vowel ('' if word-initial).
+
+    For an /at/-final word this is the segment before the Arabic feminine ending,
+    which is the Phase 0.5 cue site.
+    """
+    b = strip_length(citation)
+    idx = [i for i, c in enumerate(b) if c in VOWELS]
+    if not idx or idx[-1] == 0:
+        return ""
+    return b[idx[-1] - 1]
+
+
+def has_hiatus(citation):
+    b = strip_length(citation)
+    return any(b[i] in VOWELS and b[i + 1] in VOWELS for i in range(len(b) - 1))
+
+
+def final_vowel_long(citation):
+    idx = [i for i, ch in enumerate(citation) if ch in VOWELS]
+    if not idx:
+        return False
+    i = idx[-1]
+    return i + 1 < len(citation) and citation[i + 1] == ":"
+
+
+def any_long_vowel(citation):
+    return ":" in citation
+
+
+def is_at_final(citation):
+    return strip_length(citation).endswith("at")
+
+
+# ----------------------------------------------------------------- stats
+def contingency(items, predicate, positive="EXCEPTION"):
+    """2x2 counts (a,b,c,d) = cue+/exc, cue+/reg, cue-/exc, cue-/reg."""
+    a = b = c = d = 0
+    for r in items:
+        hit = predicate(r)
+        exc = r["status"] == positive
+        if hit and exc:
+            a += 1
+        elif hit:
+            b += 1
+        elif exc:
+            c += 1
+        else:
+            d += 1
+    return a, b, c, d
+
+
+def phi(a, b, c, d):
+    den = (a + b) * (c + d) * (a + c) * (b + d)
+    return (a * d - b * c) / math.sqrt(den) if den else float("nan")
+
+
+def cue_report(items, predicate, label, positive="EXCEPTION"):
+    a, b, c, d = contingency(items, predicate, positive)
+    p = phi(a, b, c, d)
+    prec = 100 * a / (a + b) if a + b else 0.0
+    rec = 100 * a / (a + c) if a + c else 0.0
+    return dict(label=label, phi=p, precision=prec, recall=rec,
+                a=a, b=b, c=c, d=d, n=a + b + c + d)
+
+
+def print_cue(rep, indent="  "):
+    print("%s%-34s phi=%+.3f  prec=%5.1f%%  rec=%5.1f%%   (%d hits / %d flagged)"
+          % (indent, rep["label"], rep["phi"], rep["precision"], rep["recall"],
+             rep["a"], rep["a"] + rep["b"]))
+
+
+def tolerance_principle(n_items, n_exceptions):
+    """Yang (2016). A rule over N items tolerates at most N/ln(N) exceptions."""
+    if n_items < 2:
+        return dict(N=n_items, e=n_exceptions, threshold=float("nan"), productive=None)
+    th = n_items / math.log(n_items)
+    return dict(N=n_items, e=n_exceptions, threshold=th, productive=n_exceptions <= th)
+
+
+# ----------------------------------------------------------------- io
+def read_tsv(path):
+    import csv
+    with open(path, encoding="utf-8") as f:
+        return list(csv.DictReader(f, delimiter="\t"))
+
+
+def write_tsv(path, rows, fieldnames=None):
+    import csv
+    if not rows:
+        raise ValueError("refusing to write an empty table: " + path)
+    fieldnames = fieldnames or list(rows[0].keys())
+    with open(path, "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=fieldnames, delimiter="\t",
+                           extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+
+
+def analysis_population(rows, backness_filter="back"):
+    """Items where an exception is logically possible and the class is determinate."""
+    out = [r for r in rows if r["status"] in ("REGULAR", "EXCEPTION")]
+    if backness_filter:
+        out = [r for r in out if r["last_v_backness"] == backness_filter]
+    return out

@@ -1,0 +1,7 @@
+# Keep TSV outputs and IPA-bearing sources as UTF-8 LF on every platform.
+* text=auto eol=lf
+*.tsv text eol=lf
+*.py  text eol=lf
+*.md  text eol=lf
+*.sh  text eol=lf
+*.bat text eol=crlf
