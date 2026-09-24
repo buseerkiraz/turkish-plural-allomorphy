@@ -33,25 +33,13 @@ FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 MIN_TOKENS = 3
 BACK_SUFFIXES = ["lar", "ları", "larda", "lardan", "ların"]
 FRONT_SUFFIXES = ["ler", "leri", "lerde", "lerden", "lerin"]
-DEACCENT = str.maketrans("âîûÂÎÛ", "aiuAIU")
 
 
 def load_freq():
-    f = {}
-    with open(FREQ, encoding="utf-8", errors="replace") as fh:
-        for line in fh:
-            p = line.split()
-            if len(p) == 2:
-                try:
-                    f[p[0]] = int(p[1])
-                except ValueError:
-                    pass
-    return f
+    return C.load_freq(FREQ)
 
 
-def orth_variants(lexeme):
-    v = {lexeme, lexeme.translate(DEACCENT)}
-    return {x for x in v if x and " " not in x and "-" not in x}
+orth_variants = C.orth_variants
 
 
 def counts(lexeme, freq):

@@ -10,7 +10,7 @@ Niyousha Mojoudi, Buse Erkiraz
 
 Python 3.7 or newer. No packages need to be installed.
 Stage 00 needs network access; every later stage is offline. A full run takes
-about 30 seconds once the data is cached (most of it the stage 08 benchmark), plus roughly a minute the first time
+about 15 minutes once the data is cached, almost all of it stage 09 (ALCOVE training, run in parallel on all cores); stages 00–08 take about 30 seconds, plus roughly a minute the first time
 for the 33 MB of downloads.
 
 macOS / Linux:
@@ -62,9 +62,10 @@ dataset and test items needed to make them diverge measurably.
 | 03 | `03_at_control.py` | Phase 0.5: controls for the Arabic feminine `-At` suffix |
 | 04 | `04_circularity_audit.py` | Checks TELL's quality diacritics are phonetic, not class markers |
 | 05 | `05_plural_check.py` | Verifies the accusative-based class transfers to the plural |
-| 06 | `06_features.py` | Codes the nine model input dimensions; emits the handoff matrix |
+| 06 | `06_features.py` | Codes the ten model input dimensions; emits the handoff matrix |
 | 07 | `07_nonce_items.py` | Builds and screens the 24-item wug set |
 | 08 | `08_alcove_benchmark.py` | Validates the ALCOVE implementation (`alcove.py`) on Shepard, Hovland & Jenkins (1961) |
+| 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
 
 ## Data sources
 
@@ -130,9 +131,10 @@ never run the pipeline.
 | `output/02_phase0_cues.tsv` | Effect size for each candidate cue |
 | `output/03_at_class.tsv` | The cleaned 295-item `/at/` class |
 | `output/05_plural_check.tsv` | Per-item corpus plural counts |
-| `output/06_model_matrix.tsv` | **Handoff file.** Nine binary dimensions per item (D0–D8). Train on `plural_ler` (1 = -ler); `is_exception` is for analysis only |
+| `output/06_model_matrix.tsv` | **Handoff file.** Ten binary dimensions per item (D0–D9). Train on `plural_ler` (1 = -ler); `is_exception` is for analysis only |
 | `output/07_nonce_items.tsv` | The screened 24-item wug set, coded on the same dimensions |
 | `output/08_alcove_shj.tsv` | ALCOVE learning curves on the six SHJ types, with and without attention learning |
+| `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
 
 ## Design decisions encoded in the code
 
@@ -156,6 +158,14 @@ The features are now defined once, in `common.MODEL_DIMENSIONS`. Stages 06 and
 07 both call that function, and stage 07 stops the run if any two cue levels
 share a feature vector. `AT_CUE_CLASS` (vowel, /h/ or any dorsal) is still the
 `/at/`-local analysis finding used in stages 02–04. It is not a model input.
+
+**The models are told a word ends in /at/ (`D9_at_final`).** The predicted
+levels (71/41/21%) and the Tolerance Principle verdicts are stated over /at/-final
+words only. Without D9, a nonce item like *kunaat* shares its feature vector with
+every back-vowel hiatus word, most of which do not end in /at/, and the -ler
+rates a model can see for the four cue levels drop to 34/18/6/0.6%. A first
+ALCOVE run without D9 tracked exactly those diluted rates. D9 does not leak the
+answer: the /at/ rime on its own is only 11.7% precise (stage 03).
 
 **ALCOVE is validated before it touches Turkish.** Stage 08 reproduces the
 Shepard, Hovland & Jenkins (1961) difficulty ordering (I < II < III–V < VI) and

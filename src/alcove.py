@@ -31,11 +31,22 @@ class Alcove:
         self.lambda_w, self.lambda_a = lambda_w, lambda_a
         self.alpha = [1.0 / self.n_dims] * self.n_dims
         self.w = [[0.0] * len(self.h) for _ in range(n_categories)]
+        self._dist = {}
+
+    def _diffs(self, x):
+        """|h_ji - x_i| for every hidden node j. Exemplars never move, so this
+        is cached per input; a speed-up only, the equations are unchanged."""
+        x = tuple(x)
+        d = self._dist.get(x)
+        if d is None:
+            d = self._dist[x] = [tuple(abs(hi - xi) for hi, xi in zip(h, x))
+                                 for h in self.h]
+        return d
 
     def _hidden(self, x):
-        return [math.exp(-self.c * sum(a * abs(hi - xi)
-                                       for a, hi, xi in zip(self.alpha, h, x)))
-                for h in self.h]
+        a = self.alpha
+        return [math.exp(-self.c * sum(ai * di for ai, di in zip(a, dj)))
+                for dj in self._diffs(x)]
 
     def _outputs(self, act):
         return [sum(wk * aj for wk, aj in zip(row, act)) for row in self.w]
@@ -64,10 +75,12 @@ class Alcove:
         # Attention gradient uses the old weights, so compute it first.
         back = [sum(err[k] * self.w[k][j] for k in range(self.n_cat))
                 for j in range(len(self.h))]
-        for i in range(self.n_dims):
-            g = sum(back[j] * act[j] * self.c * abs(self.h[j][i] - x[i])
-                    for j in range(len(self.h)))
-            self.alpha[i] = max(0.0, self.alpha[i] - self.lambda_a * g)
+        if self.lambda_a:
+            diffs = self._diffs(x)
+            ba = [b * a for b, a in zip(back, act)]
+            for i in range(self.n_dims):
+                g = self.c * sum(baj * dj[i] for baj, dj in zip(ba, diffs))
+                self.alpha[i] = max(0.0, self.alpha[i] - self.lambda_a * g)
 
         for k in range(self.n_cat):
             row = self.w[k]

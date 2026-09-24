@@ -176,6 +176,13 @@ MODEL_DIMENSIONS = [
      lambda c: last_vowel(c) in ROUND_V),
     ("D8_voiced_final_c", "DISTRACTOR: final C voiced (governs kitap~kitabi, not harmony)",
      lambda c: final_consonant(c) in VOICED_C),
+    # Without D9 a nonce item like kunaat shares its vector with every back
+    # hiatus word, most of which are not /at/-final, so a model sees -ler rates
+    # of 34/18/6/0.6% instead of the /at/-internal 71/41/21/~1% the predictions
+    # are stated over. D9 lets a model form the /at/ neighbourhood. It does not
+    # leak the answer: Stage 03 shows /at/ alone is 11.7% precise.
+    ("D9_at_final", "word ends in the rime /at/",
+     lambda c: is_at_final(c)),
 ]
 DIMENSION_NAMES = [name for name, _, _ in MODEL_DIMENSIONS]
 
@@ -245,6 +252,29 @@ def tolerance_verdict(n_items, n_ler):
     if tolerance_principle(n_items, n_items - n_ler)["productive"]:
         return "-ler (local sub-rule)"
     return "no productive rule"
+
+
+# ----------------------------------------------------------------- corpus
+DEACCENT = str.maketrans("âîûÂÎÛ", "aiuAIU")   # corpora rarely write circumflexes
+
+
+def load_freq(path):
+    """OpenSubtitles frequency list as {word form: token count}."""
+    f = {}
+    with open(path, encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            p = line.split()
+            if len(p) == 2:
+                try:
+                    f[p[0]] = int(p[1])
+                except ValueError:
+                    pass
+    return f
+
+
+def orth_variants(lexeme):
+    v = {lexeme, lexeme.translate(DEACCENT)}
+    return {x for x in v if x and " " not in x and "-" not in x}
 
 
 # ----------------------------------------------------------------- io

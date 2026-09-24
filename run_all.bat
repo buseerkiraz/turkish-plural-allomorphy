@@ -21,7 +21,7 @@ echo Using interpreter: %PY%
 
 for %%S in (00_fetch_data 01_extract 02_phase0_audit 03_at_control ^
             04_circularity_audit 05_plural_check 06_features 07_nonce_items ^
-            08_alcove_benchmark) do (
+            08_alcove_benchmark 09_alcove_turkish) do (
   echo.
   echo ==================================================================
   echo ^>^>^> %%S.py

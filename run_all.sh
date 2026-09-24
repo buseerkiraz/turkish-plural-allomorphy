@@ -14,6 +14,7 @@ STAGES=(
   "06_features.py"
   "07_nonce_items.py"
   "08_alcove_benchmark.py"
+  "09_alcove_turkish.py"
 )
 
 for s in "${STAGES[@]}"; do
