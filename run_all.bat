@@ -20,7 +20,8 @@ if not errorlevel 1 set "PY=py -3"
 echo Using interpreter: %PY%
 
 for %%S in (00_fetch_data 01_extract 02_phase0_audit 03_at_control ^
-            04_circularity_audit 05_plural_check 06_features 07_nonce_items) do (
+            04_circularity_audit 05_plural_check 06_features 07_nonce_items ^
+            08_alcove_benchmark) do (
   echo.
   echo ==================================================================
   echo ^>^>^> %%S.py

@@ -13,10 +13,14 @@ Design constraints this satisfies:
    no not-applicable value, so those were unusable.  Every dimension below is a
    property of the final syllable and has an answer for every word.
 
-3. NO LEAKAGE.  Nothing here encodes exceptionality, etymology, or harmony class.
+3. LABEL IS THE SUFFIX.  Models train on plural_ler (1 = -ler), not on
+   is_exception. A front-vowel word and a back-vowel regular take different
+   suffixes and must be different classes, or the rule has nothing to learn.
+
+4. NO LEAKAGE.  Nothing here encodes exceptionality, etymology, or harmony class.
    Lateral QUALITY is excluded on the Stage 04 circularity finding.
 
-4. DISTRACTORS INCLUDED.  D5 and D6 govern other Turkish processes and should be
+5. DISTRACTORS INCLUDED.  D7 and D8 govern other Turkish processes and should be
    learned-and-ignored.  Without them the model is handed only diagnostic
    features and the task is easier than the learner's real one.
 """
@@ -45,7 +49,7 @@ def onset_label(d):
 def print_onset_table(items, title):
     print("\n  %s (n=%d)" % (title, len(items)))
     print("    %-18s %-4s %8s %10s %9s" % ("onset", "D1", "items", "exceptions", "rate"))
-    t = collections.Counter((onset_label(d), d["D1_palatal_final_syl"], d["target"])
+    t = collections.Counter((onset_label(d), d["D1_palatal_final_syl"], d["is_exception"])
                             for d in items)
     for onset in ONSET_DIMS + ["(none)"]:
         for d1 in (1, 0):
@@ -93,7 +97,13 @@ def main():
                  final_C=r["final_C"], pre_final_v=r["pre_final_v"],
                  at_final=r["at_final"])
         d.update(C.model_features(r["citation"]))
-        d["target"] = 1 if r["status"] == "EXCEPTION" else 0
+        # Two labels, kept apart on purpose. plural_ler is what a model learns
+        # to predict: the suffix itself, so the harmony rule is learnable.
+        # is_exception is for analysis only; training on it would make front
+        # and back regulars the same class and hide the rule.
+        d["is_exception"] = 1 if r["status"] == "EXCEPTION" else 0
+        d["plural_ler"] = 1 if (r["last_v_backness"] == "front"
+                                or d["is_exception"]) else 0
         d["neighbourhood"] = ("at" if r["at_final"] == "Y" and r["final_C"] == "t"
                               else "lateral" if r["final_C"] in C.LATERALS
                               else "other")
@@ -146,7 +156,7 @@ def main():
 
     ap = [d for d in out if d["analysis_population"] == "Y"]
     print("\n  Primary analysis population (back-vowel /at/): %d items, %d exceptions"
-          % (len(ap), sum(d["target"] for d in ap)))
+          % (len(ap), sum(d["is_exception"] for d in ap)))
 
     C.write_tsv(os.path.join(OUT, "06_model_matrix.tsv"), out)
     print("\n  wrote output/06_model_matrix.tsv (%d rows) -- this is the handoff file"

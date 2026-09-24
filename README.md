@@ -10,7 +10,7 @@ Niyousha Mojoudi, Buse Erkiraz
 
 Python 3.7 or newer. No packages need to be installed.
 Stage 00 needs network access; every later stage is offline. A full run takes
-about 5 seconds once the data is cached, plus roughly a minute the first time
+about 30 seconds once the data is cached (most of it the stage 08 benchmark), plus roughly a minute the first time
 for the 33 MB of downloads.
 
 macOS / Linux:
@@ -64,6 +64,7 @@ dataset and test items needed to make them diverge measurably.
 | 05 | `05_plural_check.py` | Verifies the accusative-based class transfers to the plural |
 | 06 | `06_features.py` | Codes the nine model input dimensions; emits the handoff matrix |
 | 07 | `07_nonce_items.py` | Builds and screens the 24-item wug set |
+| 08 | `08_alcove_benchmark.py` | Validates the ALCOVE implementation (`alcove.py`) on Shepard, Hovland & Jenkins (1961) |
 
 ## Data sources
 
@@ -129,8 +130,9 @@ never run the pipeline.
 | `output/02_phase0_cues.tsv` | Effect size for each candidate cue |
 | `output/03_at_class.tsv` | The cleaned 295-item `/at/` class |
 | `output/05_plural_check.tsv` | Per-item corpus plural counts |
-| `output/06_model_matrix.tsv` | **Handoff file.** Nine binary dimensions per item (D0–D8) |
+| `output/06_model_matrix.tsv` | **Handoff file.** Nine binary dimensions per item (D0–D8). Train on `plural_ler` (1 = -ler); `is_exception` is for analysis only |
 | `output/07_nonce_items.tsv` | The screened 24-item wug set, coded on the same dimensions |
+| `output/08_alcove_shj.tsv` | ALCOVE learning curves on the six SHJ types, with and without attention learning |
 
 ## Design decisions encoded in the code
 
@@ -154,6 +156,14 @@ The features are now defined once, in `common.MODEL_DIMENSIONS`. Stages 06 and
 07 both call that function, and stage 07 stops the run if any two cue levels
 share a feature vector. `AT_CUE_CLASS` (vowel, /h/ or any dorsal) is still the
 `/at/`-local analysis finding used in stages 02–04. It is not a model input.
+
+**ALCOVE is validated before it touches Turkish.** Stage 08 reproduces the
+Shepard, Hovland & Jenkins (1961) difficulty ordering (I < II < III–V < VI) and
+Kruschke's (1992) ablation: with attention learning frozen, Type II loses its
+advantage over Type IV. Separately, `alcove.py` was run against the reference
+implementation `slpALCOVE` in the R package `catlearn` (v1.1) on the same trial
+sequences (SHJ Types II and VI, and a random 9-dimension, 3-category problem).
+Choice probabilities agreed to within 1e-10 on every trial.
 
 **No orthography anywhere.** Turkish spelling does not reliably mark palatality
 or vowel length, so coding from written forms destroys exactly the cues under
