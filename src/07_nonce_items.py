@@ -15,6 +15,11 @@ Design: 4 stems x 6 segments before the -at ending, fully crossed.  Within a
 stem block the ONLY thing that varies is the cue segment, which is the
 Albright & Hayes matched-set logic.
 
+Features: each item is transcribed into TELL's alphabet and coded by
+common.model_features, the same function Stage 06 uses for real words. The run
+fails if two cue levels share a feature vector, because a model cannot respond
+differently to inputs it cannot tell apart.
+
 Screening: every candidate is checked against the complete TELL lexeme list and
 against the ~2.0m-type corpus.  Any hit is rejected, because a "nonce" word that
 turns out to be real destroys the item.
@@ -35,6 +40,8 @@ STEMS = ["kuna", "tıza", "bora", "nuda"]
 # Lexical exception rate before -at, from stage 03, drives the three cue levels.
 # The middle level is the one that discriminates the models: RULEX has no way to
 # represent "somewhat", ALCOVE does.
+# cue_level groups segments the design treats as one condition; it is what the
+# distinctness check compares.
 ENDINGS = [
     ("",  "hiatus",            "strong cue", 70.6, "saat, cemaat, kanaat, ziraat, itaat"),
     ("h", "/h/",               "strong cue", 40.9, "kabahat, seyahat, nasihat, sarahat"),
@@ -43,6 +50,27 @@ ENDINGS = [
     ("m", "labial nasal",      "no cue",      0.0, "alamet, kıyamet, selamet"),
     ("r", "rhotic",            "no cue",      3.1, "ibaret, imaret, maharet, ziyaret"),
 ]
+
+
+# Spelling -> TELL transcription, for the letters the nonce stems use. Every
+# other letter is its own TELL symbol. Dorsals stay velar: all stems are
+# back-vowel, where Turkish k/g are velar.
+TO_TELL = {"ı": "ɯ", "r": "ɾ"}
+
+
+def transcribe(form):
+    return "".join(TO_TELL.get(ch, ch) for ch in form)
+
+
+def check_distinct(items):
+    """Each cue level must differ in model space from every other level."""
+    by_level = {}
+    for r in items:
+        vec = tuple(r[n] for n in C.DIMENSION_NAMES)
+        by_level.setdefault(r["cue_level"], set()).add(vec)
+    clashes = [(a, b) for a in by_level for b in by_level
+               if a < b and by_level[a] & by_level[b]]
+    return by_level, clashes
 
 
 def load_tell_lexemes():
@@ -82,16 +110,17 @@ def main():
             in_tell = form in lex
             in_corpus = any(form + s in freq for s in
                             ("", "lar", "ler", "ı", "i", "ta", "te"))
-            rec = dict(form=form, stem=stem, pre_ending_segment=seg or "(vowel)",
+            rec = dict(form=form, transcription=transcribe(form), stem=stem,
+                       pre_ending_segment=seg or "(vowel)",
                        segment_type=seglabel, cue_class=cls,
-                       D1_palatal_final_syl=0,
-                       D2_guttural_onset=1 if seg in ("", "h") else 0,
+                       cue_level=seglabel if cls != "no cue" else "no cue",
                        lexical_exception_rate_pct=lexrate,
                        cue_predicts="-ler" if cls != "no cue" else "-lar",
                        real_word_models=models,
                        in_TELL="Y" if in_tell else "N",
                        in_corpus="Y" if in_corpus else "N",
                        accepted="N" if (in_tell or in_corpus) else "Y")
+            rec.update(C.model_features(rec["transcription"]))
             (rejected if rec["accepted"] == "N" else items).append(rec)
 
     print("  %-12s %-18s %-12s %7s %8s %9s" % ("form", "segment type", "cue class",
@@ -105,6 +134,23 @@ def main():
     print("\n  accepted: %d    rejected: %d" % (len(items), len(rejected)))
     if rejected:
         print("  Replace any rejected item with a new stem and re-run before use.")
+
+    short = [n.split("_")[0] for n in C.DIMENSION_NAMES]
+    print("\n  MODEL-SPACE CODING (common.model_features, same as Stage 06)")
+    print("    %-18s %s" % ("cue level", " ".join("%-3s" % n for n in short)))
+    by_level, clashes = check_distinct(items)
+    for level, vecs in by_level.items():
+        for v in sorted(vecs):
+            print("    %-18s %s" % (level, " ".join("%-3d" % x for x in v)))
+    if clashes:
+        for a, b in clashes:
+            print("  FAIL: cue levels '%s' and '%s' share a feature vector" % (a, b))
+        print("  The models cannot distinguish these levels. Fix the dimensions in")
+        print("  common.MODEL_DIMENSIONS before handing this set over.")
+        sys.exit(1)
+    print("    Each cue level has its own vector: the models can tell them apart.")
+    print("    The four stems code identically (the dimensions only read the final")
+    print("    syllable), so for the models they are replicates of one item per level.")
 
     print("\n" + "=" * 72)
     print("PRE-REGISTERED PREDICTIONS")

@@ -54,20 +54,27 @@ VOICED_C = set("bdgɟvzʒʒʤdʒmnɾljɫ")
 # dorsal-only set for Stage 06's D1 dimension.
 PALATAL_C_MODEL_SAFE = PALATAL_DORSAL
 
-# AT_CUE_CLASS and D2_ONSET overlap heavily but must not be merged.
-#
 # AT_CUE_CLASS is the Phase 0.5 finding: within /at/-final words, exceptions occur
 # essentially only when this class stands before the ending. It is a local
-# generalisation over one neighbourhood and includes the dorsals.
+# generalisation over one neighbourhood and includes the dorsals. It is an
+# ANALYSIS set (stages 02-04), not a model input; see MODEL_DIMENSIONS below.
 AT_CUE_CLASS = {"a", "h"} | DORSALS
-#
-# D2_ONSET is the model input dimension. It is the narrower, dorsal-free version.
-# The dorsals are dropped here because lexicon-wide they are far too common
-# (16.4% of all items) to function as a cue, and the palatal ones are already
-# captured by D1. Using the wide class as a model dimension collapses the D1xD2
-# interaction; using the narrow one preserves it. See stage 06 output.
-D2_ONSET = VOWELS | {"h"}
 GUTTURAL_ONSET = AT_CUE_CLASS | VOWELS   # legacy alias: the widest variant
+# Exploratory Stage 02 cue only. This used to be the single model dimension
+# D2, which lumped vowel and /h/ together and left velar dorsals uncoded. That
+# made the nonce items kunaat and kunahat identical in model space, and kunakat
+# identical to the no-cue items, so the 71/41/21 ordering the nonce test exists
+# to probe was invisible to both models. Replaced by three onset dimensions.
+VOWEL_OR_H_ONSET = VOWELS | {"h"}
+
+# The three onset classes the model sees, one binary dimension each. They are
+# mutually exclusive, so each /at/ cue level gets its own feature vector.
+# Separate flags rather than one lumped class: lexicon-wide the dorsals are
+# common, and lumping them with vowel and /h/ is what collapsed the earlier
+# D1xD2 interaction. As its own dimension a model can learn to down-weight it.
+ONSET_VOWEL = VOWELS
+ONSET_H = {"h"}
+ONSET_DORSAL = DORSALS
 
 JUNK_CHARS = "~#?_;@34/-"      # stray editorial marks in TELL citation fields
 
@@ -145,6 +152,37 @@ def any_long_vowel(citation):
 
 def is_at_final(citation):
     return strip_length(citation).endswith("at")
+
+
+# ----------------------------------------------------------------- model input
+# Defined over the transcription alone so that Stage 06 (real words) and Stage 07
+# (nonce words) code items through the same function and cannot drift apart.
+MODEL_DIMENSIONS = [
+    ("D0_backness", "last vowel backness (THE RULE DIMENSION)",
+     lambda c: backness(last_vowel(c)) == "back"),
+    ("D1_palatal_final_syl", "palatal dorsal (c, ɟ) anywhere in the final syllable",
+     lambda c: any(ch in PALATAL_C_MODEL_SAFE for ch in final_syllable(c))),
+    ("D2_onset_vowel", "segment before the final vowel is a vowel (hiatus)",
+     lambda c: pre_final_vowel(c) in ONSET_VOWEL),
+    ("D3_onset_h", "segment before the final vowel is /h/",
+     lambda c: pre_final_vowel(c) in ONSET_H),
+    ("D4_onset_dorsal", "segment before the final vowel is a dorsal (k, g, c, ɟ)",
+     lambda c: pre_final_vowel(c) in ONSET_DORSAL),
+    ("D5_closed_syl", "word ends in a consonant",
+     lambda c: bool(final_consonant(c))),
+    ("D6_polysyllabic", "two or more vowels",
+     lambda c: len(vowels_of(c)) >= 2),
+    ("D7_round_final_v", "DISTRACTOR: final vowel is rounded (governs -(s)I, not -lAr)",
+     lambda c: last_vowel(c) in ROUND_V),
+    ("D8_voiced_final_c", "DISTRACTOR: final C voiced (governs kitap~kitabi, not harmony)",
+     lambda c: final_consonant(c) in VOICED_C),
+]
+DIMENSION_NAMES = [name for name, _, _ in MODEL_DIMENSIONS]
+
+
+def model_features(citation):
+    """The binary model input vector for one TELL-style transcription."""
+    return {name: int(fn(citation)) for name, _, fn in MODEL_DIMENSIONS}
 
 
 # ----------------------------------------------------------------- stats

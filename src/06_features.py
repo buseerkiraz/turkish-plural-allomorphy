@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Stage 06 - code the six model input dimensions and emit the model matrix.
+"""Stage 06 - code the model input dimensions and emit the model matrix.
 
 Design constraints this satisfies:
 
@@ -30,22 +30,30 @@ import common as C
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
 
-DIMENSIONS = [
-    ("D0_backness", "last vowel backness (THE RULE DIMENSION)",
-     lambda r: 1 if r["last_v_backness"] == "back" else 0),
-    ("D1_palatal_final_syl", "palatal dorsal (c, ɟ) anywhere in the final syllable",
-     lambda r: 1 if any(ch in C.PALATAL_C_MODEL_SAFE for ch in r["final_syllable"]) else 0),
-    ("D2_guttural_onset", "segment before the final vowel is a vowel or /h/",
-     lambda r: 1 if r["pre_final_v"] in C.D2_ONSET else 0),
-    ("D3_closed_syl", "word ends in a consonant",
-     lambda r: 1 if r["final_C"] else 0),
-    ("D4_polysyllabic", "two or more vowels",
-     lambda r: 1 if int(r["n_syllables"]) >= 2 else 0),
-    ("D5_round_final_v", "DISTRACTOR: final vowel is rounded (governs -(s)I, not -lAr)",
-     lambda r: 1 if r["last_v"] in C.ROUND_V else 0),
-    ("D6_voiced_final_c", "DISTRACTOR: final C voiced (governs kitap~kitabi, not harmony)",
-     lambda r: 1 if r["final_C"] in C.VOICED_C else 0),
-]
+# The dimensions themselves live in common.MODEL_DIMENSIONS, so Stage 07 codes
+# the nonce items through exactly the same function.
+
+ONSET_DIMS = ["D2_onset_vowel", "D3_onset_h", "D4_onset_dorsal"]
+
+
+def onset_label(d):
+    on = [n for n in ONSET_DIMS if d[n]]
+    assert len(on) <= 1, "onset dimensions must be mutually exclusive: %s" % d["lexeme"]
+    return on[0] if on else "(none)"
+
+
+def print_onset_table(items, title):
+    print("\n  %s (n=%d)" % (title, len(items)))
+    print("    %-18s %-4s %8s %10s %9s" % ("onset", "D1", "items", "exceptions", "rate"))
+    t = collections.Counter((onset_label(d), d["D1_palatal_final_syl"], d["target"])
+                            for d in items)
+    for onset in ONSET_DIMS + ["(none)"]:
+        for d1 in (1, 0):
+            e, g = t[(onset, d1, 1)], t[(onset, d1, 0)]
+            if e + g:
+                print("    %-18s %-4d %8d %10d %8.1f%%"
+                      % (onset, d1, e + g, e, 100 * e / (e + g)))
+
 
 # Designed minimal pairs. Each is (exception, regular), matched on the segment
 # before -at and on rough length. Items the Stage 05 corpus check flagged as
@@ -84,8 +92,7 @@ def main():
         d = dict(lexeme=r["lexeme"], citation=r["citation"], status=r["status"],
                  final_C=r["final_C"], pre_final_v=r["pre_final_v"],
                  at_final=r["at_final"])
-        for name, _, fn in DIMENSIONS:
-            d[name] = fn(r)
+        d.update(C.model_features(r["citation"]))
         d["target"] = 1 if r["status"] == "EXCEPTION" else 0
         d["neighbourhood"] = ("at" if r["at_final"] == "Y" and r["final_C"] == "t"
                               else "lateral" if r["final_C"] in C.LATERALS
@@ -97,41 +104,26 @@ def main():
 
     print("STAGE 06 -- feature coding\n")
     print("  DIMENSIONS")
-    for name, desc, _ in DIMENSIONS:
+    for name, desc, _ in C.MODEL_DIMENSIONS:
         n1 = sum(d[name] for d in out)
         print("    %-22s %-62s  on in %5d/%d" % (name, desc, n1, len(out)))
 
     back = [d for d in out if d["D0_backness"] == 1]
-    print("\n  HOW D1 AND D2 CROSS (back-vowel population, n=%d)" % len(back))
-    print("    %-6s %-6s %8s %10s %9s" % ("D1", "D2", "items", "exceptions", "rate"))
-    t = collections.Counter((d["D1_palatal_final_syl"], d["D2_guttural_onset"],
-                             d["target"]) for d in back)
-    empty_cells = []
-    for d1 in (1, 0):
-        for d2 in (1, 0):
-            e = t[(d1, d2, 1)]
-            g = t[(d1, d2, 0)]
-            if e + g == 0:
-                empty_cells.append((d1, d2))
-            print("    %-6d %-6d %8d %10d %8.1f%%"
-                  % (d1, d2, e + g, e, 100 * e / (e + g) if e + g else 0))
-    if empty_cells:
-        print("    %d of 4 cells empty (D1=%s): D2's dorsals rarely also carry a"
-              % (len(empty_cells), ", ".join("%d/%d" % c for c in empty_cells)))
-        print("    D1 palatal dorsal in the same final syllable. RULEX should")
-        print("    partition the remaining cells; ALCOVE should smooth them.")
-    else:
-        print("    Monotone and graded with no empty cell. RULEX should partition this;")
-        print("    ALCOVE should smooth it.")
+    print_onset_table(back, "EXCEPTION RATE BY ONSET, whole back-vowel population")
+    print_onset_table([d for d in out if d["analysis_population"] == "Y"],
+                      "EXCEPTION RATE BY ONSET, back-vowel /at/ (primary population)")
+    print("    The onset classes are separate dimensions so that the /at/ cue")
+    print("    levels (vowel > /h/ > dorsal > none) are distinct inputs. Whether a")
+    print("    model reproduces their ordering is left to the model.")
 
     print("\n  REDUNDANCY CHECK (a feature that duplicates D0 inflates dimensionality)")
     front = [d for d in out if d["D0_backness"] == 0]
-    for name, _, _ in DIMENSIONS[1:3]:
+    for name in ["D1_palatal_final_syl"] + ONSET_DIMS:
         pb = 100 * sum(d[name] for d in back) / len(back)
         pf = 100 * sum(d[name] for d in front) / len(front)
         print("    %-22s on in %5.1f%% of back-vowel, %5.1f%% of front-vowel items"
               % (name, pb, pf))
-    print("    Neither tracks D0, so neither is the rule dimension in disguise.")
+    print("    None tracks D0, so none is the rule dimension in disguise.")
 
     # ---- minimal pairs ----
     byname = {r["lexeme"]: r for r in keep}

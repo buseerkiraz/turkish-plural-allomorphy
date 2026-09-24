@@ -62,7 +62,7 @@ dataset and test items needed to make them diverge measurably.
 | 03 | `03_at_control.py` | Phase 0.5: controls for the Arabic feminine `-At` suffix |
 | 04 | `04_circularity_audit.py` | Checks TELL's quality diacritics are phonetic, not class markers |
 | 05 | `05_plural_check.py` | Verifies the accusative-based class transfers to the plural |
-| 06 | `06_features.py` | Codes the six model input dimensions; emits the handoff matrix |
+| 06 | `06_features.py` | Codes the nine model input dimensions; emits the handoff matrix |
 | 07 | `07_nonce_items.py` | Builds and screens the 24-item wug set |
 
 ## Data sources
@@ -124,8 +124,8 @@ never run the pipeline.
 | `output/02_phase0_cues.tsv` | Effect size for each candidate cue |
 | `output/03_at_class.tsv` | The cleaned 295-item `/at/` class |
 | `output/05_plural_check.tsv` | Per-item corpus plural counts |
-| `output/06_model_matrix.tsv` | **Handoff file.** Six binary dimensions per item |
-| `output/07_nonce_items.tsv` | The screened 24-item wug set |
+| `output/06_model_matrix.tsv` | **Handoff file.** Nine binary dimensions per item (D0–D8) |
+| `output/07_nonce_items.tsv` | The screened 24-item wug set, coded on the same dimensions |
 
 ## Design decisions encoded in the code
 
@@ -139,11 +139,16 @@ comparison is unfair. Stage 07 builds the replacement.
 so conditional features like "is the lateral clear?" cannot be used. Every
 dimension in stage 06 is a property of the final syllable.
 
-**`D2_ONSET` and `AT_CUE_CLASS` are deliberately different sets.** The `/at/`-local
-cue includes the dorsals; the model dimension does not, because lexicon-wide the
-dorsals are too common to function as a cue and the palatal ones are already in
-`D1`. Using the wide set as a model dimension collapses the D1×D2 interaction
-from 100/40/7/0.3 to 41/43/4/0.2. See the note in `common.py`.
+**The segment before the final vowel is three dimensions, not one.**
+`D2_onset_vowel`, `D3_onset_h` and `D4_onset_dorsal` are separate, mutually
+exclusive flags. An earlier version had a single D2 (vowel or /h/) and no
+velar-dorsal dimension. That coded the nonce items *kunaat* and *kunahat*
+identically, and *kunakat* identically to the no-cue items, so neither model
+could have reproduced the 71/41/21 ordering the nonce test is built to detect.
+The features are now defined once, in `common.MODEL_DIMENSIONS`. Stages 06 and
+07 both call that function, and stage 07 stops the run if any two cue levels
+share a feature vector. `AT_CUE_CLASS` (vowel, /h/ or any dorsal) is still the
+`/at/`-local analysis finding used in stages 02–04. It is not a model input.
 
 **No orthography anywhere.** Turkish spelling does not reliably mark palatality
 or vowel length, so coding from written forms destroys exactly the cues under

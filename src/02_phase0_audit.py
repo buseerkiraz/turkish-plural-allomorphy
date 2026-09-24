@@ -37,8 +37,8 @@ CUES = [
     ("final vowel rounded", lambda r: r["last_v"] in C.ROUND_V),
     ("palatal C in final syllable",
      lambda r: any(ch in C.PALATAL_C for ch in r["final_syllable"])),
-    ("onset is vowel or /h/ (=D2)",
-     lambda r: r["pre_final_v"] in C.D2_ONSET),
+    ("onset is vowel or /h/",
+     lambda r: r["pre_final_v"] in C.VOWEL_OR_H_ONSET),
     ("onset in /at/ cue class (wide)",
      lambda r: r["pre_final_v"] in C.AT_CUE_CLASS),
 ]
@@ -91,8 +91,8 @@ def main():
          [("hiatus", lambda r: r["hiatus"] == "Y"),
           ("any long vowel", lambda r: r["any_long_v"] == "Y"),
           ("ends in rime /at/", lambda r: r["at_final"] == "Y"),
-          ("onset is vowel or /h/ (=D2)",
-           lambda r: r["pre_final_v"] in C.D2_ONSET),
+          ("onset is vowel or /h/",
+           lambda r: r["pre_final_v"] in C.VOWEL_OR_H_ONSET),
           ("onset in /at/ cue class (wide)",
            lambda r: r["pre_final_v"] in C.AT_CUE_CLASS)])]:
         e = sum(1 for r in sub if r["status"] == "EXCEPTION")
