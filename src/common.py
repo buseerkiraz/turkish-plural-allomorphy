@@ -231,6 +231,22 @@ def tolerance_principle(n_items, n_exceptions):
     return dict(N=n_items, e=n_exceptions, threshold=th, productive=n_exceptions <= th)
 
 
+def tolerance_verdict(n_items, n_ler):
+    """Which plural, if any, the Tolerance Principle licenses over one class.
+
+    Both directions have to be checked. -lar over the class has n_ler
+    exceptions; a local -ler sub-rule has the regulars as ITS exceptions. A class
+    too mixed for either rule gets no productive rule at all.
+    """
+    if n_items < 2:
+        return "too few items"
+    if tolerance_principle(n_items, n_ler)["productive"]:
+        return "-lar (default holds)"
+    if tolerance_principle(n_items, n_items - n_ler)["productive"]:
+        return "-ler (local sub-rule)"
+    return "no productive rule"
+
+
 # ----------------------------------------------------------------- io
 def read_tsv(path):
     import csv

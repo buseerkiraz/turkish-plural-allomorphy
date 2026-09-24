@@ -37,19 +37,27 @@ TELL = os.path.join(HERE, "..", "data", "tell")
 FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 
 STEMS = ["kuna", "tıza", "bora", "nuda"]
-# Lexical exception rate before -at, from stage 03, drives the three cue levels.
-# The middle level is the one that discriminates the models: RULEX has no way to
-# represent "somewhat", ALCOVE does.
-# cue_level groups segments the design treats as one condition; it is what the
-# distinctness check compares.
+# (spelling of the segment, its TELL symbol, label, class, real-word models).
+# The lexical exception rate for each segment is read from Stage 03's cleaned
+# /at/ table rather than typed in, so it cannot go stale. The middle levels are
+# the ones that discriminate the models.
 ENDINGS = [
-    ("",  "hiatus",            "strong cue", 70.6, "saat, cemaat, kanaat, ziraat, itaat"),
-    ("h", "/h/",               "strong cue", 40.9, "kabahat, seyahat, nasihat, sarahat"),
-    ("k", "velar dorsal",      "weak cue",   20.8, "dikkat, rikkat, sirkat, ifakat"),
-    ("s", "coronal fricative", "no cue",      0.0, "sanat, ticaret, kısmet, hiddet"),
-    ("m", "labial nasal",      "no cue",      0.0, "alamet, kıyamet, selamet"),
-    ("r", "rhotic",            "no cue",      3.1, "ibaret, imaret, maharet, ziyaret"),
+    ("",  "a", "hiatus",            "strong cue", "saat, cemaat, kanaat, ziraat, itaat"),
+    ("h", "h", "/h/",               "strong cue", "kabahat, seyahat, nasihat, sarahat"),
+    ("k", "k", "velar dorsal",      "weak cue",   "dikkat, rikkat, sirkat, ifakat"),
+    ("s", "s", "coronal fricative", "no cue",     "sanat, ticaret, kısmet, hiddet"),
+    ("m", "m", "labial nasal",      "no cue",     "alamet, kıyamet, selamet"),
+    ("r", "ɾ", "rhotic",            "no cue",     "ibaret, imaret, maharet, ziyaret"),
 ]
+
+
+def at_class_counts():
+    """{segment before -at: (items, exceptions)} over Stage 03's cleaned class."""
+    counts = {}
+    for r in C.read_tsv(os.path.join(OUT, "03_at_class.tsv")):
+        n, e = counts.get(r["pre_final_v"], (0, 0))
+        counts[r["pre_final_v"]] = (n + 1, e + (r["status"] == "EXCEPTION"))
+    return counts
 
 
 # Spelling -> TELL transcription, for the letters the nonce stems use. Every
@@ -103,9 +111,12 @@ def main():
     print("  screening against %d TELL lexeme strings and %d corpus types\n"
           % (len(lex), len(freq)))
 
+    counts = at_class_counts()
     items, rejected = [], []
     for stem in STEMS:
-        for seg, seglabel, cls, lexrate, models in ENDINGS:
+        for seg, tell_seg, seglabel, cls, models in ENDINGS:
+            n, e = counts.get(tell_seg, (0, 0))
+            lexrate = round(100 * e / n, 1) if n else float("nan")
             form = stem + seg + "at"
             in_tell = form in lex
             in_corpus = any(form + s in freq for s in
@@ -153,32 +164,65 @@ def main():
     print("    syllable), so for the models they are replicates of one item per level.")
 
     print("\n" + "=" * 72)
+    print("TOLERANCE PRINCIPLE BY NONCE CUE LEVEL (Stage 03 cleaned /at/ class)")
+    print("=" * 72)
+    print("  %-18s %-10s %5s %5s %5s %9s  %s"
+          % ("cue level", "segments", "N", "-ler", "-lar", "threshold", "licenses"))
+    levels = []
+    for label in ("hiatus", "/h/", "velar dorsal", "no cue"):
+        segs = [t for _, t, l, c, _ in ENDINGS
+                if (l if c != "no cue" else "no cue") == label]
+        n = sum(counts.get(t, (0, 0))[0] for t in segs)
+        e = sum(counts.get(t, (0, 0))[1] for t in segs)
+        th = C.tolerance_principle(n, e)["threshold"]
+        levels.append((label, C.tolerance_verdict(n, e)))
+        print("  %-18s %-10s %5d %5d %5d %9.1f  %s"
+              % (label, ",".join(segs), n, e, n - e, th, levels[-1][1]))
+    ins = [r for r in C.read_tsv(os.path.join(OUT, "03_at_class.tsv"))
+           if r["in_guttural_class"] == "Y"]
+    e = sum(r["status"] == "EXCEPTION" for r in ins)
+    print("  %-18s %-10s %5d %5d %5d %9.1f  %s"
+          % ("whole cue class", "a,h,dors", len(ins), e, len(ins) - e,
+             C.tolerance_principle(len(ins), e)["threshold"],
+             C.tolerance_verdict(len(ins), e)))
+    print("""
+  Counts are from an adult dictionary. A learner's vocabulary is smaller, and
+  the verdicts for classes this size can flip with a handful of items, so
+  treat the pattern as the prediction, not the exact thresholds.""")
+
+    print("\n" + "=" * 72)
     print("PRE-REGISTERED PREDICTIONS")
     print("=" * 72)
     print("""
-  The three cue sub-types have lexical exception rates of 71%, 41% and 21%.
+  The three cue sub-types have lexical exception rates of %s.
   How a model treats that ordering is the whole experiment.
 
-  RULEX     A sharp, near-categorical split between cue and no-cue, with the
-            three cue sub-types treated ALIKE. RULEX stores a rule plus an
-            exception list; it has no representation of "somewhat exceptional",
-            so it should not reproduce the 71/41/21 ordering.
-
   ALCOVE    A graded response tracking summed similarity to stored exceptions,
-            so it SHOULD reproduce the ordering: kunaat > kunahat > kunakat.
-            Recovering that ordering is the clearest possible evidence for
-            exemplar-based generalisation here.
+            so it SHOULD reproduce the ordering: kunaat > kunahat > kunakat >
+            no-cue, with kunakat above the no-cue items.
 
-  TOLERANCE Inside the cue neighbourhood the default rule is not productive
-  PRINCIPLE (stage 03: N=84, e=34, threshold 19.0), so a learner should form a
-            local sub-rule covering the whole neighbourhood. Prediction: a HIGH
-            and UNIFORM -ler rate across all three sub-types, i.e. the same
-            flat profile as RULEX but at a much higher level.
+  RULEX     Each simulated learner is categorical: it either holds a rule that
+            sends a cue level to -ler or it does not, and stored exceptions are
+            whole items that do not generalise to nonce words. The reported
+            prediction is the AVERAGE over many learners, which is graded if
+            different learners find different rules. So RULEX is not assumed
+            flat: its profile has to be simulated. What it predicts that ALCOVE
+            does not is the per-learner distribution: all-or-none responses per
+            cue level, not intermediate ones.
 
-  So: flat-and-low = RULEX without the rule; flat-and-high = a sub-rule;
-  ordered 71/41/21 = ALCOVE. Three distinguishable signatures from one 24-item
-  set, which is the point of crossing the design.
-""")
+  TOLERANCE The whole cue class licenses no rule, but its sub-classes differ
+  PRINCIPLE (table above):
+%s
+            Prediction: a STEPPED profile, not a slope. Levels with a sub-rule
+            come out high, levels where -lar holds come out as low as the
+            no-cue items, and levels with no productive rule come out
+            unstable (variable across and within speakers).
+
+  So the discriminating item is kunakat. ALCOVE puts it above the no-cue items;
+  the Tolerance Principle puts it with them. The hiatus-vs-/h/ gap separates a
+  smooth slope from a step.
+""" % (" / ".join("%.0f%%" % items[i]["lexical_exception_rate_pct"] for i in range(3)),
+       "\n".join("              %-14s -> %s" % lv for lv in levels)))
 
     C.write_tsv(os.path.join(OUT, "07_nonce_items.tsv"), items + rejected)
     print("  wrote output/07_nonce_items.tsv")

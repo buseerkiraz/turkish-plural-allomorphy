@@ -145,11 +145,12 @@ def main():
 
     tp = C.tolerance_principle(len(ins), ei)
     print("\n  Tolerance Principle inside the neighbourhood:")
-    print("    N=%d e=%d threshold=%.1f -> default rule %s"
-          % (tp["N"], tp["e"], tp["threshold"],
-             "PRODUCTIVE" if tp["productive"] else "NOT productive"))
-    print("    Contrast with the whole lexicon, where it IS productive. The two")
-    print("    populations come apart, which is a prediction distinct from both models.")
+    print("    N=%d, -ler=%d, -lar=%d, threshold=%.1f -> %s"
+          % (tp["N"], ei, len(ins) - ei, tp["threshold"],
+             C.tolerance_verdict(len(ins), ei)))
+    print("    Neither -lar nor a -ler sub-rule survives over the whole class, so")
+    print("    the class as a unit licenses nothing. Stage 07 applies the test to")
+    print("    the sub-classes the nonce items actually probe.")
 
     print("\n  Exception rate inside the class is %.1f%%: neither deterministic"
           % (100 * ei / len(ins)))

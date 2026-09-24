@@ -113,6 +113,11 @@ never run the pipeline.
   training vocabulary but are excluded from reported results.
 - The dorsal contrast is clean (0 palatal dorsals in 649 front-vowel items), and
   the winning cue does not read the palatality diacritic at all.
+- Tolerance Principle, checked in both directions: the /at/ cue class as a whole
+  (84 items, 34 `-ler`) licenses **no productive rule**. Its sub-classes differ:
+  hiatus licenses a local `-ler` sub-rule (12/17), velar /k/ keeps `-lar` (5/24),
+  and /h/ licenses neither (9/22). So the Tolerance Principle predicts a stepped
+  profile on the nonce items, with *kunakat* falling with the no-cue items.
 - Plural spot-check: **269/280 testable items agree** with TELL's
   accusative-based class (96.1%); 99/102 within the `/at/` class.
 
