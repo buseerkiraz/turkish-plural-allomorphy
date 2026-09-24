@@ -31,31 +31,23 @@ harmony series, so the weight does not favour either class. Homographs (e.g.
 'sat', also 'sell!') inflate some counts; this is noise, not bias toward -ler.
 """
 import collections
-import math
 import multiprocessing
 import os
-import random
 import statistics
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C
+import training_data as T
 from alcove import Alcove
+from training_data import AT_GROUPS, LATERALS, LEVELS, VOCAB_SIZES
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
-FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 
-VOCAB_SIZES = [1000, 2000, 5000]
-LATERALS = ["with", "without"]
 LEARNERS = 20            # per condition; each has its own vocabulary and order
 EPOCHS = 80              # small vocabularies settle slowly: few /at/ words each
 PARAMS = dict(c=6.5, phi=2.0, lambda_w=0.03, lambda_a=0.0033)   # as Stage 08
-FREQ_FORMS = ["", "lar", "ları", "larda", "lardan", "ların",
-              "ler", "leri", "lerde", "lerden", "lerin"]
-LEVELS = ["hiatus", "/h/", "velar dorsal", "no cue"]
-AT_GROUPS = [("hiatus", "D2_onset_vowel"), ("/h/", "D3_onset_h"),
-             ("dorsal", "D4_onset_dorsal"), ("none", None)]
 CONVERGENCE_TOL = 0.05   # max change in a CONDITION MEAN over the second half.
 # Single learners never settle exactly: with a fixed learning rate ALCOVE keeps
 # moving by about 0.1 with trial order even at 120 epochs. That is noise that
@@ -64,33 +56,13 @@ CONVERGENCE_TOL = 0.05   # max change in a CONDITION MEAN over the second half.
 _POOL = {}               # filled per worker by _init
 
 
-def vec(r):
-    return tuple(int(r[d]) for d in C.DIMENSION_NAMES)
-
-
-def at_group(r):
-    for name, dim in AT_GROUPS:
-        if dim is None or r[dim] == "1":
-            return name
-
-
 def _init(pool):
     _POOL.update(pool)
 
 
-def weighted_sample(items, weights, n, rng):
-    """n items without replacement, P proportional to weight
-    (Efraimidis & Spirakis 2006: keep the n largest u ** (1 / w))."""
-    keyed = [(math.log(rng.random()) / w, i) for i, w in enumerate(weights)]
-    keyed.sort(reverse=True)
-    return [items[i] for _, i in keyed[:n]]
-
-
 def run_learner(job):
     vocab_size, laterals, k = job
-    rng = random.Random("%d-%s-%d" % (vocab_size, laterals, k))
-    words, weights = _POOL[laterals]
-    vocab = weighted_sample(words, weights, vocab_size, rng)
+    rng, vocab = T.learner(_POOL, vocab_size, laterals, k)
 
     net = Alcove(sorted({w["vec"] for w in vocab}), 2, **PARAMS)
     halfway = None
@@ -107,8 +79,7 @@ def run_learner(job):
     at_pred = collections.defaultdict(list)
     for w in _POOL["at_all"]:
         at_pred[w["at_group"]].append(net.predict(w["vec"])[1])
-    at_in_vocab = collections.Counter((w["at_group"], w["y"]) for w in vocab
-                                      if w["at"])
+    at_in_vocab = T.vocab_summary(vocab)
     return dict(vocab=vocab_size, laterals=laterals, learner=k, nonce=nonce,
                 halfway=halfway,
                 fit=fit, alpha=list(net.alpha), n_nodes=len(net.h),
@@ -117,39 +88,12 @@ def run_learner(job):
                 n_exc=sum(w["exc"] for w in vocab))
 
 
-def load():
-    rows = C.read_tsv(os.path.join(OUT, "06_model_matrix.tsv"))
-    freq = C.load_freq(FREQ)
-    words = []
-    for r in rows:
-        f = sum(freq.get(v + s, 0) for v in C.orth_variants(r["lexeme"])
-                for s in FREQ_FORMS)
-        words.append(dict(lexeme=r["lexeme"], vec=vec(r), y=int(r["plural_ler"]),
-                          exc=int(r["is_exception"]), freq=f,
-                          lateral=r["neighbourhood"] == "lateral",
-                          at=r["analysis_population"] == "Y",
-                          at_group=at_group(r)))
-    heard = [w for w in words if w["freq"] > 0]
-    pool = {}
-    for lat in LATERALS:
-        ws = [w for w in heard if lat == "with" or not w["lateral"]]
-        pool[lat] = (ws, [w["freq"] for w in ws])
-
-    nonce = {}
-    for r in C.read_tsv(os.path.join(OUT, "07_nonce_items.tsv")):
-        if r["accepted"] == "Y":
-            nonce.setdefault(r["cue_level"], vec(r))
-    pool["nonce"] = {lv: nonce[lv] for lv in LEVELS}
-    pool["at_all"] = [w for w in words if w["at"]]
-    return words, heard, pool
-
-
 def sd(xs):
     return statistics.stdev(xs) if len(xs) > 1 else 0.0
 
 
 def main():
-    words, heard, pool = load()
+    words, heard, pool = T.load()
     print("STAGE 09 -- ALCOVE trained on Turkish, tested on nonce items\n")
     print("  lexicon: %d words, %d heard in the corpus (only these are sampled)"
           % (len(words), len(heard)))
@@ -161,16 +105,7 @@ def main():
     with multiprocessing.Pool(initializer=_init, initargs=(pool,)) as mp:
         results = mp.map(run_learner, jobs)
 
-    # Lexical -ler rate per nonce level, pooled over the segments each level
-    # uses, from Stage 03's cleaned /at/ class (the same source as Stage 07).
-    segs = collections.defaultdict(set)
-    for r in C.read_tsv(os.path.join(OUT, "07_nonce_items.tsv")):
-        segs[r["cue_level"]].add(r["transcription"][-3])   # segment before -at
-    at = C.read_tsv(os.path.join(OUT, "03_at_class.tsv"))
-    lex_rate = {}
-    for lv in LEVELS:
-        hit = [r for r in at if r["pre_final_v"] in segs[lv]]
-        lex_rate[lv] = 100 * sum(r["status"] == "EXCEPTION" for r in hit) / len(hit)
+    lex_rate = T.lexicon_rates()
     by = collections.defaultdict(list)
     for r in results:
         by[(r["laterals"], r["vocab"])].append(r)

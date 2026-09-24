@@ -10,7 +10,7 @@ Niyousha Mojoudi, Buse Erkiraz
 
 Python 3.7 or newer. No packages need to be installed.
 Stage 00 needs network access; every later stage is offline. A full run takes
-about 15 minutes once the data is cached, almost all of it stage 09 (ALCOVE training, run in parallel on all cores); stages 00–08 take about 30 seconds, plus roughly a minute the first time
+about 20 minutes once the data is cached, almost all of it stages 09 and 11 (model training, run in parallel on all cores); stages 00–08 and 10 take under a minute, plus roughly a minute the first time
 for the 33 MB of downloads.
 
 macOS / Linux:
@@ -66,6 +66,8 @@ dataset and test items needed to make them diverge measurably.
 | 07 | `07_nonce_items.py` | Builds and screens the 24-item wug set |
 | 08 | `08_alcove_benchmark.py` | Validates the ALCOVE implementation (`alcove.py`) on Shepard, Hovland & Jenkins (1961) |
 | 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
+| 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
+| 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
 
 ## Data sources
 
@@ -135,6 +137,8 @@ never run the pipeline.
 | `output/07_nonce_items.tsv` | The screened 24-item wug set, coded on the same dimensions |
 | `output/08_alcove_shj.tsv` | ALCOVE learning curves on the six SHJ types, with and without attention learning |
 | `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
+| `output/10_rulex_benchmarks.tsv` | RULEX on the Medin & Schaffer 5-4 structure and the six SHJ types, beside the published values |
+| `output/11_rulex_nonce.tsv` | RULEX P(-ler) per learner and cue level, for the main and three sensitivity parameter settings |
 
 ## Design decisions encoded in the code
 
@@ -174,6 +178,17 @@ advantage over Type IV. Separately, `alcove.py` was run against the reference
 implementation `slpALCOVE` in the R package `catlearn` (v1.1) on the same trial
 sequences (SHJ Types II and VI, and a random 9-dimension, 3-category problem).
 Choice probabilities agreed to within 1e-10 on every trial.
+
+**RULEX is validated against the published numbers.** No reference
+implementation exists, so stage 10 checks `rulex.py` against Nosofsky, Palmeri &
+McKinley (1994). On Medin & Schaffer's 5-4 structure, with the paper's fitted
+parameters, its predictions lie within RMSD .029 of the paper's own RULEX
+predictions and .052 of the observed data (paper: .048), with the same split of
+learners across Dimension-1 and Dimension-3 rules. It also reproduces the SHJ
+ordering. The paper leaves some details open (listed in the `rulex.py`
+docstring). One of them mattered: scoring a rule's accuracy on trials where it
+gives no answer made two-dimension rules unlearnable and broke Type II, so
+accuracy is scored only on trials where the rule responds.
 
 **No orthography anywhere.** Turkish spelling does not reliably mark palatality
 or vowel length, so coding from written forms destroys exactly the cues under
