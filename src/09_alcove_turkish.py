@@ -61,10 +61,13 @@ def _init(pool):
 
 
 def run_learner(job):
-    vocab_size, laterals, k = job
+    """job = (vocab size, lateral condition, learner k[, parameters]). The
+    optional parameters default to PARAMS; Stage 12 passes other settings."""
+    vocab_size, laterals, k = job[:3]
+    params = job[3] if len(job) > 3 else PARAMS
     rng, vocab = T.learner(_POOL, vocab_size, laterals, k)
 
-    net = Alcove(sorted({w["vec"] for w in vocab}), 2, **PARAMS)
+    net = Alcove(sorted({w["vec"] for w in vocab}), 2, **params)
     halfway = None
     for ep in range(EPOCHS):
         order = vocab[:]

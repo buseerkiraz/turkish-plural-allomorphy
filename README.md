@@ -10,7 +10,7 @@ Niyousha Mojoudi, Buse Erkiraz
 
 Python 3.7 or newer. No packages need to be installed.
 Stage 00 needs network access; every later stage is offline. A full run takes
-about 20 minutes once the data is cached, almost all of it stages 09 and 11 (model training, run in parallel on all cores); stages 00–08 and 10 take under a minute, plus roughly a minute the first time
+about 45 minutes once the data is cached, almost all of it stages 09, 11 and 12 (model training, run in parallel on all cores); stages 00–08 and 10 take under a minute, plus roughly a minute the first time
 for the 33 MB of downloads.
 
 macOS / Linux:
@@ -68,6 +68,7 @@ dataset and test items needed to make them diverge measurably.
 | 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
 | 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
 | 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
+| 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with each parameter halved and doubled, and with attention learning off |
 
 ## Figures
 
@@ -161,6 +162,7 @@ never run the pipeline.
 | `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
 | `output/10_rulex_benchmarks.tsv` | RULEX on the Medin & Schaffer 5-4 structure and the six SHJ types, beside the published values |
 | `output/11_rulex_nonce.tsv` | RULEX P(-ler) per learner and cue level, for the main and three sensitivity parameter settings |
+| `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the ten parameter settings |
 
 ## Design decisions encoded in the code
 
