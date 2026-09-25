@@ -89,7 +89,7 @@ def main():
     print("  k>none = learners whose kunakat P(-ler) is above their no-cue P(-ler)")
     print("  RMSD   = distance of the four means from the dictionary rates")
     print("  drift  = largest change in a mean over the last %d epochs"
-          % (S09.EPOCHS - S09.EPOCHS // 2))
+          % (S09.EPOCHS - S09.CHECKPOINT))
 
     held = [n for n, o, k, _ in summary if o and k == LEARNERS]
     unsettled = [n for n, _, _, d in summary if d > S09.CONVERGENCE_TOL]

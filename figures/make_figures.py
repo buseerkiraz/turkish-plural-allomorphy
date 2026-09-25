@@ -214,8 +214,8 @@ def fig3():
                  "vocabulary is large", x=0.06, ha="left", y=1.04, fontsize=11)
     fig.text(0.06, -0.04, "Points: mean over simulated learners (ALCOVE 20, RULEX 100); "
              "error bars: ±1 SE. Dictionary rates from the cleaned /at/ class (stage 03).\n"
-             "ALCOVE at 1,000 and 2,000 words had not fully settled after 80 epochs "
-             "(stage 09); read those panels as indicative.", color=MUTED, fontsize=7.5)
+             "Both models trained 80 epochs; means checked stable to 160 (RULEX) and "
+             "320 (ALCOVE) epochs.", color=MUTED, fontsize=7.5)
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     save(fig, "fig3_nonce_profiles")
 

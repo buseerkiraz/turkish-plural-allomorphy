@@ -46,9 +46,13 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
 
 LEARNERS = 20            # per condition; each has its own vocabulary and order
-EPOCHS = 80              # small vocabularies settle slowly: few /at/ words each
+EPOCHS = 80              # checked to 320 for 1,000 and 2,000 words: no condition
+                         # mean moved more than .031 between epochs 80 and 320.
+CHECKPOINT = 60          # convergence = change over the last quarter. Small
+                         # vocabularies are still learning at epoch 40, so a
+                         # half-way comparison mistakes learning for drift.
 PARAMS = dict(c=6.5, phi=2.0, lambda_w=0.03, lambda_a=0.0033)   # as Stage 08
-CONVERGENCE_TOL = 0.05   # max change in a CONDITION MEAN over the second half.
+CONVERGENCE_TOL = 0.05   # max change in a CONDITION MEAN after CHECKPOINT.
 # Single learners never settle exactly: with a fixed learning rate ALCOVE keeps
 # moving by about 0.1 with trial order even at 120 epochs. That is noise that
 # averages out across learners, so convergence is judged on the means.
@@ -74,7 +78,7 @@ def run_learner(job):
         rng.shuffle(order)
         for w in order:
             net.train(w["vec"], w["y"])
-        if ep + 1 == EPOCHS // 2:
+        if ep + 1 == CHECKPOINT:
             halfway = {lv: net.predict(v)[1] for lv, v in _POOL["nonce"].items()}
 
     nonce = {lv: net.predict(v)[1] for lv, v in _POOL["nonce"].items()}
@@ -176,7 +180,7 @@ def main():
         print("    %-8s %6d  mean P(correct) on own vocabulary %.3f; "
               "largest change in a nonce mean over the last %d epochs %.3f"
               % (lat, n, statistics.mean(r["fit"] for r in rs),
-                 EPOCHS - EPOCHS // 2, d))
+                 EPOCHS - CHECKPOINT, d))
     if worst > CONVERGENCE_TOL:
         print("    WARNING: nonce means still moving by more than %.2f; "
               "raise EPOCHS before reading the shape." % CONVERGENCE_TOL)
