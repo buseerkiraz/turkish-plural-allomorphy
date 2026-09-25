@@ -87,3 +87,12 @@ class Alcove:
             for j in range(len(self.h)):
                 row[j] += self.lambda_w * err[k] * act[j]
         return probs
+
+
+# Parameters used for every ALCOVE simulation in this project: the best fit of
+# standard ALCOVE (r = q = 1, humble teacher, alpha = 1/n, w = 0) to the human
+# SHJ learning curves of Nosofsky, Gluck, Palmeri, McKinley & Glauthier (1994),
+# 16 blocks of 16 trials, 40 participants per type. Taken from the R package
+# catlearn (v1.1), nosof94exalcove_opt(): lowest SSE (.142) of 15 optimiser
+# starts. Stage 08 re-derives the fit (SSE .143 with this implementation).
+SHJ_HUMAN_FIT = dict(c=5.8219, phi=1.9539, lambda_w=0.0754, lambda_a=0.9856)

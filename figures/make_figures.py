@@ -10,7 +10,7 @@ Needs matplotlib, which the pipeline itself does not. From the repo root:
 Run the pipeline first (stages 03, 07, 08, 09, 10, 11 are read). Writes a PNG
 and a PDF of each figure next to this script.
 
-  fig1_alcove_benchmark   ALCOVE on the six SHJ types, attention on vs frozen
+  fig1_alcove_benchmark   people vs ALCOVE on the six SHJ types, attention on/frozen
   fig2_rulex_benchmark    RULEX against Nosofsky et al.'s (1994) published values
   fig3_nonce_profiles     both models on the nonce items, against the real /at/
                           words and the Tolerance Principle, per vocabulary size
@@ -78,30 +78,36 @@ def spread(ys, gap):
 # ------------------------------------------------------------------ figure 1
 def fig1():
     rows = read("08_alcove_shj.tsv")
-    curves = collections.defaultdict(list)
-    for r in rows:
-        curves[(r["condition"], r["type"])].append((int(r["epoch"]), float(r["p_error"])))
     types = ["I", "II", "III", "IV", "V", "VI"]
-    fig, axes = plt.subplots(1, 2, figsize=(8.2, 3.3), sharey=True)
-    for ax, (cond, title) in zip(axes, [("attention", "Attention learning on"),
-                                        ("frozen", "Attention frozen (λα = 0)")]):
+    series = {(col, t): [] for col in ("human", "alcove", "alcove_frozen") for t in types}
+    for r in rows:
+        for col in ("human", "alcove", "alcove_frozen"):
+            series[(col, r["type"])].append((int(r["block"]), float(r[col])))
+    fig, axes = plt.subplots(1, 3, figsize=(10.2, 3.4), sharey=True)
+    panels = [("human", "People (Nosofsky et al. 1994)"),
+              ("alcove", "ALCOVE, fitted to people"),
+              ("alcove_frozen", "ALCOVE, attention frozen")]
+    for ax, (col, title) in zip(axes, panels):
         ends = []
-        for t, col in zip(types, SLOTS):
-            pts = sorted(curves[(cond, t)])
-            ax.plot([p[0] for p in pts], [p[1] for p in pts], color=col, label="Type " + t)
+        for t, colour in zip(types, SLOTS):
+            pts = sorted(series[(col, t)])
+            ax.plot([p[0] for p in pts], [p[1] for p in pts], color=colour,
+                    label="Type " + t)
             ends.append(pts[-1][1])
-        for t, y in zip(types, spread(ends, 0.017)):
-            ax.text(51.8, y, t, color=INK2, va="center", fontsize=7.5)
-            ax.plot([50.3, 51.5], [ends[types.index(t)], y], color=AXIS, lw=0.6)
+        for t, y in zip(types, spread(ends, 0.02)):
+            ax.text(17.1, y, t, color=INK2, va="center", fontsize=7.5)
+            ax.plot([16.2, 16.9], [ends[types.index(t)], y], color=AXIS, lw=0.6)
         ax.set_title(title, loc="left")
-        ax.set_xlabel("Epoch (8 trials)")
-        ax.set_xlim(1, 55)
+        ax.set_xlabel("Block (16 trials)")
+        ax.set_xlim(1, 18.2)
+        ax.set_xticks([1, 4, 8, 12, 16])
         ax.set_ylim(0, 0.52)
     axes[0].set_ylabel("P(error)")
-    axes[0].legend(ncol=6, loc="lower left", bbox_to_anchor=(0, 1.1), fontsize=8,
+    axes[0].legend(ncol=6, loc="lower left", bbox_to_anchor=(0, 1.12), fontsize=8,
                    handlelength=1.4, columnspacing=1.0)
-    fig.suptitle("ALCOVE reproduces the SHJ ordering only with attention learning",
-                 x=0.06, ha="left", y=1.1, fontsize=11)
+    fig.suptitle("ALCOVE fitted to people gets the SHJ ordering, which needs attention "
+                 "learning; it makes Type VI too easy", x=0.06, ha="left", y=1.12,
+                 fontsize=11)
     save(fig, "fig1_alcove_benchmark")
 
 

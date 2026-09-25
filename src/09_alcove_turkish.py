@@ -23,8 +23,10 @@ Conditions, fully crossed:
             the whole lateral neighbourhood, regular and exceptional alike, so it
             does not distort the -ler rate of what remains.
 
-Parameters are the ones validated in Stage 08. With no human data there is
-nothing to fit them to; a parameter grid for robustness is the next stage.
+Parameters are alcove.SHJ_HUMAN_FIT: standard ALCOVE's best fit to human
+learning of the Shepard et al. (1961) types (Nosofsky et al. 1994), validated
+in Stage 08. There are no human Turkish data to fit them to; Stage 12 checks
+that the result survives halving and doubling each of them.
 
 Frequency is the corpus count of the bare form plus its plural forms in BOTH
 harmony series, so the weight does not favour either class. Homographs (e.g.
@@ -39,7 +41,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C
 import training_data as T
-from alcove import Alcove
+from alcove import Alcove, SHJ_HUMAN_FIT
 from training_data import AT_GROUPS, LATERALS, LEVELS, VOCAB_SIZES
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -51,7 +53,7 @@ EPOCHS = 80              # checked to 320 for 1,000 and 2,000 words: no conditio
 CHECKPOINT = 60          # convergence = change over the last quarter. Small
                          # vocabularies are still learning at epoch 40, so a
                          # half-way comparison mistakes learning for drift.
-PARAMS = dict(c=6.5, phi=2.0, lambda_w=0.03, lambda_a=0.0033)   # as Stage 08
+PARAMS = SHJ_HUMAN_FIT   # fitted to human SHJ learning; validated in Stage 08
 CONVERGENCE_TOL = 0.05   # max change in a CONDITION MEAN after CHECKPOINT.
 # Single learners never settle exactly: with a fixed learning rate ALCOVE keeps
 # moving by about 0.1 with trial order even at 120 epochs. That is noise that
@@ -82,13 +84,22 @@ def run_learner(job):
             halfway = {lv: net.predict(v)[1] for lv, v in _POOL["nonce"].items()}
 
     nonce = {lv: net.predict(v)[1] for lv, v in _POOL["nonce"].items()}
+    # How much of each nonce item's hidden activation comes from exemplars with
+    # an IDENTICAL feature vector, as opposed to merely similar ones. Near 1
+    # means ALCOVE is answering by exact lookup, not by similarity.
+    exact_share = {}
+    for lv, v in _POOL["nonce"].items():
+        act = net._hidden(v)
+        total = sum(act)
+        same = sum(a for a, h in zip(act, net.h) if tuple(int(x) for x in h) == v)
+        exact_share[lv] = same / total if total else float("nan")
     fit = statistics.mean(net.predict(w["vec"])[w["y"]] for w in vocab)
     at_pred = collections.defaultdict(list)
     for w in _POOL["at_all"]:
         at_pred[w["at_group"]].append(net.predict(w["vec"])[1])
     at_in_vocab = T.vocab_summary(vocab)
     return dict(vocab=vocab_size, laterals=laterals, learner=k, nonce=nonce,
-                halfway=halfway,
+                halfway=halfway, exact_share=exact_share,
                 fit=fit, alpha=list(net.alpha), n_nodes=len(net.h),
                 at_pred={g: statistics.mean(v) for g, v in at_pred.items()},
                 at_in_vocab=dict(at_in_vocab),

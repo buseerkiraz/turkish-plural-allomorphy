@@ -64,11 +64,11 @@ dataset and test items needed to make them diverge measurably.
 | 05 | `05_plural_check.py` | Verifies the accusative-based class transfers to the plural |
 | 06 | `06_features.py` | Codes the ten model input dimensions; emits the handoff matrix |
 | 07 | `07_nonce_items.py` | Builds and screens the 24-item wug set |
-| 08 | `08_alcove_benchmark.py` | Validates the ALCOVE implementation (`alcove.py`) on Shepard, Hovland & Jenkins (1961) |
+| 08 | `08_alcove_benchmark.py` | Validates ALCOVE (`alcove.py`) against human learning of the Shepard, Hovland & Jenkins (1961) types (Nosofsky et al. 1994) |
 | 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
 | 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
 | 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
-| 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with each parameter halved and doubled, and with attention learning off |
+| 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with c, φ and λw halved and doubled, with slow attention, and with attention off |
 
 ## Figures
 
@@ -158,11 +158,11 @@ never run the pipeline.
 | `output/05_plural_check.tsv` | Per-item corpus plural counts |
 | `output/06_model_matrix.tsv` | **Handoff file.** Ten binary dimensions per item (D0–D9). Train on `plural_ler` (1 = -ler); `is_exception` is for analysis only |
 | `output/07_nonce_items.tsv` | The screened 24-item wug set, coded on the same dimensions |
-| `output/08_alcove_shj.tsv` | ALCOVE learning curves on the six SHJ types, with and without attention learning |
+| `output/08_alcove_shj.tsv` | Human and ALCOVE learning curves on the six SHJ types, ALCOVE with and without attention learning |
 | `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
 | `output/10_rulex_benchmarks.tsv` | RULEX on the Medin & Schaffer 5-4 structure and the six SHJ types, beside the published values |
 | `output/11_rulex_nonce.tsv` | RULEX P(-ler) per learner and cue level, for the main and three sensitivity parameter settings |
-| `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the ten parameter settings |
+| `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the nine parameter settings |
 
 ## Design decisions encoded in the code
 
@@ -195,13 +195,36 @@ rates a model can see for the four cue levels drop to 34/18/6/0.6%. A first
 ALCOVE run without D9 tracked exactly those diluted rates. D9 does not leak the
 answer: the /at/ rime on its own is only 11.7% precise (stage 03).
 
-**ALCOVE is validated before it touches Turkish.** Stage 08 reproduces the
-Shepard, Hovland & Jenkins (1961) difficulty ordering (I < II < III–V < VI) and
-Kruschke's (1992) ablation: with attention learning frozen, Type II loses its
-advantage over Type IV. Separately, `alcove.py` was run against the reference
+**ALCOVE is validated against people before it touches Turkish.** Its
+parameters (`alcove.SHJ_HUMAN_FIT`: c = 5.82, φ = 1.95, λw = 0.075, λα = 0.986)
+are standard ALCOVE's best fit to human learning of the Shepard, Hovland &
+Jenkins (1961) types, from the replication by Nosofsky et al. (1994), 40
+participants per type, as distributed in `catlearn`. Stage 08 re-derives that
+fit (RMSD .039 over the 96 human data points), reproduces the difficulty
+ordering (I < II < III–V ≤ VI), and reproduces Kruschke's (1992) ablation: with
+attention learning frozen, Type II loses its advantage over Type IV. One
+limitation is reported rather than hidden: ALCOVE makes Type VI only slightly
+harder than Types III–V, while people find it clearly hardest. An earlier
+version used parameter values recalled from Kruschke (1992) that could not be
+checked against the paper and learned far too slowly compared with people
+(RMSD .152); the Turkish result was the same under both. Separately, `alcove.py` was run against the reference
 implementation `slpALCOVE` in the R package `catlearn` (v1.1) on the same trial
 sequences (SHJ Types II and VI, and a random 9-dimension, 3-category problem).
 Choice probabilities agreed to within 1e-10 on every trial.
+
+**With the fitted parameters, ALCOVE answers by exact lookup, and it does not
+matter.** The attention rate was fitted to a 256-trial task. Over up to 400,000
+Turkish trials attention grows without bound (about 25 per dimension, from 0.1),
+so ALCOVE answers a nonce item only from exemplars with an identical feature
+vector: they carry 100% of *kunaat*'s activation (stage 12, "exact"). This is
+possible because the ten features are coarse enough that every nonce item has
+real-word twins. Stage 12 shows the result does not depend on it: with slow
+attention (λα = .0033) identical exemplars carry 87% and similar ones the rest;
+with attention off, only 9% comes from identical exemplars. In all three the
+cue levels come out in the same order, and the slow-attention means match the
+main ones to within .002. So the comparison is between remembering how often
+words like this take *-ler* (ALCOVE) and a rule with a few stored exceptions
+(RULEX); it does not rest on ALCOVE generalising across different sounds.
 
 **RULEX is validated against the published numbers.** No reference
 implementation exists, so stage 10 checks `rulex.py` against Nosofsky, Palmeri &

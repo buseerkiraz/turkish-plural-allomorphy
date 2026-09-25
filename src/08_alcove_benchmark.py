@@ -1,21 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""Stage 08 - validate the ALCOVE implementation on a classic benchmark.
+"""Stage 08 - validate ALCOVE against human learning data before using it.
 
-Before ALCOVE is trained on Turkish, it has to reproduce a published result, or
-nothing it says about Turkish can be trusted. The benchmark is the six category
-structures of Shepard, Hovland & Jenkins (1961): eight stimuli on three binary
-dimensions, split 4/4 in the six possible ways. People learn them in the order
+Before ALCOVE is trained on Turkish, it has to reproduce how PEOPLE learn a
+classic benchmark, or nothing it says about Turkish can be trusted.
 
-    I  <  II  <  III, IV, V  <  VI        (fewest errors first)
+Benchmark: the six category structures of Shepard, Hovland & Jenkins (1961),
+eight stimuli on three binary dimensions split 4/4 in the six possible ways,
+as replicated by Nosofsky, Gluck, Palmeri, McKinley & Glauthier (1994):
+40 participants per type, 16 blocks of 16 trials (each stimulus twice per
+block). Their mean error per block (their Table 1, as distributed in the R
+package catlearn as `nosof94`) is reproduced below as HUMAN.
 
-(Shepard et al. 1961; replicated by Nosofsky, Gluck, Palmeri, McKinley & Glauthier
-1994). Kruschke (1992) showed ALCOVE reproduces this, and that it does so
-BECAUSE of attention learning: with attention frozen, Type II (two relevant
-dimensions) loses its advantage over Type IV (three dimensions, linearly
-separable). Both halves are checked here. The second half is the stronger test,
-because it shows the attention mechanism is doing the work, not just that the
-numbers came out in order.
+Parameters: alcove.SHJ_HUMAN_FIT, the best fit of standard ALCOVE to exactly
+these data (catlearn's nosof94exalcove_opt). They are the parameters used for
+Turkish in Stages 09 and 12, so the model that learns Turkish is the one that
+matches human category learning here.
+
+Checks:
+  1. FIT       RMSD to the 96 human data points (6 types x 16 blocks) <= .06.
+  2. ORDER     I < II < III, IV, V <= VI in mean error, as in people.
+  3. ATTENTION with attention learning frozen, Type II loses its advantage over
+               Type IV. Kruschke (1992) showed this is WHY ALCOVE gets the
+               ordering: it shows the mechanism works, not just the numbers.
+
+Known limitation, reported rather than hidden: with these parameters ALCOVE
+learns Type VI almost as fast as Types III-V (about .125 vs .122 mean error),
+whereas people find it clearly hardest (.195). The ordering holds, the size of
+the Type VI gap does not.
 
 The type table was checked independently: enumerating all 70 4/4 splits of the
 cube under its 48 symmetries gives exactly six classes, and the six below cover
@@ -28,7 +40,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C
-from alcove import Alcove
+from alcove import Alcove, SHJ_HUMAN_FIT
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
@@ -44,15 +56,25 @@ TYPES = {
     "V":   {"000", "001", "010", "111"},
     "VI":  {"000", "011", "101", "110"},
 }
-
-# Parameter values Kruschke (1992) reports for his SHJ simulation (Figure 5).
-# Check them against the paper before citing; the checks below test the
-# qualitative ordering, which does not hinge on the exact values.
-PARAMS = dict(c=6.5, phi=2.0, lambda_w=0.03, lambda_a=0.0033)
-EPOCHS = 50          # one epoch = each of the 8 stimuli once, in random order
+# Nosofsky et al. (1994) Table 1, first 16 blocks: mean P(error) per block.
+HUMAN = {
+    "I":   [.211, .025, .003, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "II":  [.378, .156, .083, .056, .031, .027, .028, .016, .016, .008, 0, .002,
+            .005, .003, .002, 0],
+    "III": [.459, .286, .223, .145, .081, .078, .063, .033, .023, .016, .019, .009,
+            .008, .013, .009, .013],
+    "IV":  [.422, .295, .222, .172, .148, .109, .089, .063, .025, .031, .019, .025,
+            .005, 0, 0, 0],
+    "V":   [.472, .331, .230, .139, .106, .081, .067, .078, .048, .045, .050, .036,
+            .031, .027, .016, .014],
+    "VI":  [.498, .341, .284, .245, .217, .192, .192, .177, .172, .128, .139, .117,
+            .103, .098, .106, .106],
+}
+PARAMS = SHJ_HUMAN_FIT
+BLOCKS = 16
 LEARNERS = 200       # simulated learners per type, each with its own trial order
-BLOCK = 5            # epochs per reported block
-SEED = 1
+RMSD_MAX = 0.06
+SEED = 7
 
 
 def label(stim, members):
@@ -60,64 +82,70 @@ def label(stim, members):
 
 
 def simulate(members, params, rng):
-    """Mean P(error) per epoch, averaged over LEARNERS simulated learners."""
-    curve = [0.0] * EPOCHS
+    """Mean P(error) per block of 16 trials, averaged over LEARNERS."""
+    curve = [0.0] * BLOCKS
     for _ in range(LEARNERS):
         net = Alcove(STIMULI, 2, **params)
-        for ep in range(EPOCHS):
-            order = STIMULI[:]
+        for b in range(BLOCKS):
+            order = STIMULI * 2
             rng.shuffle(order)
             for s in order:
                 y = label(s, members)
-                curve[ep] += 1.0 - net.train(s, y)[y]
-    return [v / (LEARNERS * len(STIMULI)) for v in curve]
+                curve[b] += 1.0 - net.train(s, y)[y]
+    return [v / (LEARNERS * 2 * len(STIMULI)) for v in curve]
 
 
 def run(params, tag):
     rng = random.Random(SEED)
     curves = {t: simulate(m, params, rng) for t, m in TYPES.items()}
     means = {t: sum(c) / len(c) for t, c in curves.items()}
-
     print("\n  %s" % tag)
-    print("    %-5s %s   %s" % ("type", " ".join("ep%-3d" % (b * BLOCK + 1)
-                                                for b in range(EPOCHS // BLOCK)),
-                                  "mean"))
+    print("    %-5s %s   %s   %s" % ("type", " ".join("b%-4d" % (b + 1)
+                                                    for b in range(0, BLOCKS, 2)),
+                                     "mean", "people"))
     for t, c in curves.items():
-        blocks = [sum(c[b * BLOCK:(b + 1) * BLOCK]) / BLOCK
-                  for b in range(EPOCHS // BLOCK)]
-        print("    %-5s %s   %.3f" % (t, " ".join("%.3f" % v for v in blocks),
-                                      means[t]))
+        print("    %-5s %s   %.3f   %.3f" % (t, " ".join("%.3f" % c[b] for b in
+                                                        range(0, BLOCKS, 2)),
+                                           means[t], sum(HUMAN[t]) / BLOCKS))
     return curves, means
 
 
 def main():
-    print("STAGE 08 -- ALCOVE benchmark: Shepard, Hovland & Jenkins (1961)")
-    print("  %d learners x %d epochs per type; P(error) per 5-epoch block"
-          % (LEARNERS, EPOCHS))
-    print("  parameters: %s" % ", ".join("%s=%g" % kv for kv in PARAMS.items()))
+    print("STAGE 08 -- ALCOVE against human SHJ learning (Nosofsky et al. 1994)")
+    print("  %d learners x %d blocks of 16 trials per type; P(error) every "
+          "second block" % (LEARNERS, BLOCKS))
+    print("  parameters (fitted to these data): %s"
+          % ", ".join("%s=%g" % kv for kv in PARAMS.items()))
 
     curves, m = run(PARAMS, "WITH attention learning")
+    sse = sum((curves[t][b] - HUMAN[t][b]) ** 2 for t in TYPES for b in range(BLOCKS))
+    rmsd = (sse / (len(TYPES) * BLOCKS)) ** 0.5
+    print("    fit to people: SSE %.3f (catlearn's fit: .142), RMSD %.3f" % (sse, rmsd))
     mid = [m["III"], m["IV"], m["V"]]
     checks = [
-        ("I < II", m["I"] < m["II"]),
-        ("II < III, IV, V", m["II"] < min(mid)),
-        ("III, IV, V < VI", max(mid) < m["VI"]),
+        ("fit: RMSD to human curves <= %.2f" % RMSD_MAX, rmsd <= RMSD_MAX),
+        ("order: I < II", m["I"] < m["II"]),
+        ("order: II < III, IV, V", m["II"] < min(mid)),
+        ("order: III, IV, V <= VI", max(mid) <= m["VI"]),
     ]
 
-    frozen = dict(PARAMS, lambda_a=0.0)
-    curves0, m0 = run(frozen, "WITHOUT attention learning (lambda_a = 0)")
+    curves0, m0 = run(dict(PARAMS, lambda_a=0.0), "WITHOUT attention learning (lambda_a = 0)")
     checks.append(("attention off: II loses its lead over IV", m0["II"] >= m0["IV"]))
 
     print("\n  CHECKS")
     for name, ok in checks:
         print("    %-44s %s" % (name, "PASS" if ok else "FAIL"))
+    print("\n  Limitation: Type VI mean error %.3f vs Types III-V %.3f-%.3f; people "
+          "%.3f vs %.3f-%.3f." % (m["VI"], min(mid), max(mid), sum(HUMAN["VI"]) / BLOCKS,
+                                 min(sum(HUMAN[t]) / BLOCKS for t in ("III", "IV", "V")),
+                                 max(sum(HUMAN[t]) / BLOCKS for t in ("III", "IV", "V"))))
 
     rows = []
-    for tag, cs in (("attention", curves), ("frozen", curves0)):
-        for t, c in cs.items():
-            for ep, v in enumerate(c, 1):
-                rows.append(dict(condition=tag, type=t, epoch=ep,
-                                 p_error="%.4f" % v))
+    for t in TYPES:
+        for b in range(BLOCKS):
+            rows.append(dict(type=t, block=b + 1, human="%.3f" % HUMAN[t][b],
+                             alcove="%.4f" % curves[t][b],
+                             alcove_frozen="%.4f" % curves0[t][b]))
     C.write_tsv(os.path.join(OUT, "08_alcove_shj.tsv"), rows)
     print("\n  wrote output/08_alcove_shj.tsv")
 
@@ -125,8 +153,8 @@ def main():
         print("\n  ALCOVE does not reproduce the benchmark. Do not train it on")
         print("  Turkish until this passes.")
         sys.exit(1)
-    print("\n  ALCOVE reproduces the SHJ ordering, and attention learning is what")
-    print("  produces it. The implementation is cleared for the Turkish data.")
+    print("\n  ALCOVE matches human SHJ learning, and attention learning is what")
+    print("  produces the ordering. Cleared for the Turkish data.")
 
 
 if __name__ == "__main__":

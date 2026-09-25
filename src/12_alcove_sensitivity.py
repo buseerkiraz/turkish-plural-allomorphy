@@ -2,15 +2,16 @@
 # -*- coding: utf-8 -*-
 """Stage 12 - does ALCOVE's nonce result depend on its parameter values?
 
-Stage 09 trains ALCOVE with one parameter set (Kruschke's SHJ values, validated
-in Stage 08). With no human data there is nothing to fit, so the question is
+Stage 09 trains ALCOVE with one parameter set (standard ALCOVE's best fit to
+human SHJ learning, validated in Stage 08). With no human data there is nothing to fit, so the question is
 whether the RESULT survives other reasonable values. Stage 11 already asks this
 of RULEX.
 
-Design: one parameter at a time, halved and doubled around the main setting,
-plus attention learning switched off (lambda_a = 0), the ablation Stage 08
-showed is what gives ALCOVE its SHJ ordering. Ten settings in all, including
-the main one. Everything else is as Stage 09: same learner function, same
+Design: c, phi and lambda_w one at a time, halved and doubled around the main
+setting; attention learning slowed to lambda_a = .0033 (see SETTINGS for why
+halving and doubling it is uninformative); and attention learning switched off
+(lambda_a = 0), the ablation Stage 08 showed gives ALCOVE its SHJ ordering.
+Nine settings in all, including the main one. Everything else is as Stage 09: same learner function, same
 vocabularies (learner k sees the same words in every setting), same 80 epochs.
 Only the 5,000-word, with-laterals condition is run: it is the one that
 settled in Stage 09 and the design default for laterals.
@@ -20,6 +21,8 @@ What counts as "the result", read off each setting:
   KUNAKAT   velar dorsal above no cue: the item that separates ALCOVE from the
             Tolerance Principle, which puts it level with no cue
   FIT       RMSD from the dictionary rates of the four levels
+  EXACT     share of kunaat's hidden activation from exemplars with an identical
+            feature vector: 1.0 means pure lookup, lower means real similarity
 """
 import collections
 import importlib
@@ -43,9 +46,17 @@ LATERALS = "with"
 LEARNERS = 10
 MAIN = S09.PARAMS
 SETTINGS = [("main", MAIN)]
-for name in ("c", "phi", "lambda_w", "lambda_a"):
+for name in ("c", "phi", "lambda_w"):
     for factor, word in ((0.5, "halved"), (2.0, "doubled")):
         SETTINGS.append(("%s %s" % (name, word), dict(MAIN, **{name: MAIN[name] * factor})))
+# Halving or doubling lambda_a changes nothing (checked: identical to the main
+# setting to three decimals). The main value was fitted to a 256-trial task;
+# over up to 400,000 Turkish trials attention grows without bound to ~25 per
+# dimension, and ALCOVE then answers a nonce item only from exemplars with an
+# IDENTICAL feature vector (see the "exact" column). The informative contrast is
+# a slow-attention regime that keeps generalisation graded: lambda_a = .0033,
+# the value used in an earlier version of this project.
+SETTINGS.append(("slow attention", dict(MAIN, lambda_a=0.0033)))
 SETTINGS.append(("attention off", dict(MAIN, lambda_a=0.0)))
 
 
@@ -62,9 +73,9 @@ def main():
 
     lex = {lv: r / 100 for lv, r in T.lexicon_rates().items()}
     rows, summary = [], []
-    print("\n  %-18s %s  %6s %6s %8s %7s %6s" % (
+    print("\n  %-18s %s  %6s %6s %8s %7s %6s %6s" % (
         "setting", "  ".join("%-7s" % lv[:7] for lv in LEVELS),
-        "order", "k>none", "RMSD", "drift", "fit"))
+        "order", "k>none", "RMSD", "drift", "fit", "exact"))
     print("  %-18s %s" % ("dictionary", "  ".join("%-7.3f" % lex[lv] for lv in LEVELS)))
     for i, (name, params) in enumerate(SETTINGS):
         rs = results[i * LEARNERS:(i + 1) * LEARNERS]
@@ -75,10 +86,11 @@ def main():
         rmsd = (sum((mean[lv] - lex[lv]) ** 2 for lv in LEVELS) / len(LEVELS)) ** 0.5
         drift = max(abs(mean[lv] - half[lv]) for lv in LEVELS)
         fit = statistics.mean(r["fit"] for r in rs)
+        exact = statistics.mean(r["exact_share"]["hiatus"] for r in rs)
         summary.append((name, ordered, k_above, drift))
-        print("  %-18s %s  %6s %3d/%-2d %8.3f %7.3f %6.3f" % (
+        print("  %-18s %s  %6s %3d/%-2d %8.3f %7.3f %6.3f %6.3f" % (
             name, "  ".join("%-7.3f" % mean[lv] for lv in LEVELS),
-            "yes" if ordered else "NO", k_above, len(rs), rmsd, drift, fit))
+            "yes" if ordered else "NO", k_above, len(rs), rmsd, drift, fit, exact))
         for r in rs:
             for lv in LEVELS:
                 rows.append(dict(setting=name, learner=r["learner"], cue_level=lv,
@@ -88,6 +100,7 @@ def main():
     print("\n  order  = mean P(-ler) falls hiatus > /h/ > velar dorsal > no cue")
     print("  k>none = learners whose kunakat P(-ler) is above their no-cue P(-ler)")
     print("  RMSD   = distance of the four means from the dictionary rates")
+    print("  exact  = share of kunaat's activation from identical-vector exemplars")
     print("  drift  = largest change in a mean over the last %d epochs"
           % (S09.EPOCHS - S09.CHECKPOINT))
 
