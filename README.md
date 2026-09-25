@@ -69,6 +69,28 @@ dataset and test items needed to make them diverge measurably.
 | 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
 | 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
 
+## Figures
+
+`figures/make_figures.py` draws the report figures from the pipeline's output
+files. It is the only part of the project that needs a third-party package
+(matplotlib), so it runs in its own environment and the pipeline stays
+standard-library only:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install matplotlib
+.venv/bin/python figures/make_figures.py
+```
+
+| Figure | Shows |
+|---|---|
+| `fig1_alcove_benchmark` | ALCOVE on the six SHJ types, with attention learning and with it frozen |
+| `fig2_rulex_benchmark` | RULEX against Nosofsky et al.'s (1994) published 5-4 predictions, and its SHJ ordering |
+| `fig3_nonce_profiles` | Both models on the nonce items, beside the dictionary rates and the Tolerance Principle, per vocabulary size and lateral condition |
+| `fig4_learner_split` | *kunaat* per learner: ALCOVE's graded answers vs RULEX's all-or-none ones |
+
+Each is written as PNG and PDF. Colours follow one rule across figures:
+ALCOVE is always blue, RULEX always orange.
+
 ## Data sources
 
 **TELL** (Turkish Electronic Living Lexicon), Inkelas, Küntay, Orgun & Sprouse,

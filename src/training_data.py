@@ -86,18 +86,23 @@ def load():
     return words, heard, pool
 
 
-def lexicon_rates():
-    """Lexical -ler rate (%) per nonce cue level, pooled over the segments each
-    level uses, from Stage 03's cleaned /at/ class (the same source as Stage 07)."""
+def lexicon_counts():
+    """{cue level: (N words, N taking -ler)} over Stage 03's cleaned /at/ class,
+    pooled over the segments each nonce level uses (the same source as Stage 07)."""
     segs = collections.defaultdict(set)
     for r in C.read_tsv(os.path.join(OUT, "07_nonce_items.tsv")):
         segs[r["cue_level"]].add(r["transcription"][-3])   # segment before -at
     at = C.read_tsv(os.path.join(OUT, "03_at_class.tsv"))
-    rates = {}
+    counts = {}
     for lv in LEVELS:
         hit = [r for r in at if r["pre_final_v"] in segs[lv]]
-        rates[lv] = 100 * sum(r["status"] == "EXCEPTION" for r in hit) / len(hit)
-    return rates
+        counts[lv] = (len(hit), sum(r["status"] == "EXCEPTION" for r in hit))
+    return counts
+
+
+def lexicon_rates():
+    """Lexical -ler rate (%) per nonce cue level (see lexicon_counts)."""
+    return {lv: 100 * e / n for lv, (n, e) in lexicon_counts().items()}
 
 
 def vocab_summary(vocab):
