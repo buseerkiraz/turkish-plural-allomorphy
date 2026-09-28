@@ -36,7 +36,13 @@ OUT = os.path.join(HERE, "..", "output")
 TELL = os.path.join(HERE, "..", "data", "tell")
 FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 
-STEMS = ["kuna", "tıza", "bora", "nuda"]
+# "zoma" replaced "bora", which is a real word (storm; also a common name) with
+# 505 corpus tokens, so speakers would parse boraat as bora + something. The
+# stems themselves are screened too: kuna 31 tokens (Croatian currency) and
+# nuda 3 are kept as negligible; tıza and zoma have none. The models are
+# unaffected: all stems code identically, since the features read only the
+# final syllable.
+STEMS = ["kuna", "tıza", "zoma", "nuda"]
 # (spelling of the segment, its TELL symbol, label, class, real-word models).
 # The lexical exception rate for each segment is read from Stage 03's cleaned
 # /at/ table rather than typed in, so it cannot go stale. The middle levels are
