@@ -23,6 +23,13 @@ schemes from training_data.epoch_sampler: type, token, and log-token (the
 usual compromise). Only presentation changes; which words a learner knows does
 not. ALCOVE 20 learners and RULEX 100 per scheme, as in Stages 09 and 11.
 
+Convergence. Checked to 240 epochs for token and log-token ALCOVE. Their means
+wobble by up to about .05 between checkpoints without trend (token /k/: .235,
+.324, .253, .325 at epochs 60, 80, 160, 240), because each token epoch is a
+fresh random draw in which rare words may or may not appear. More training does
+not remove this. The orderings held at every checkpoint: token puts /k/ above
+/h/, log-token keeps /h/ above /k/. Read token-trained means as +-.05.
+
 Caveat on the token counts: the corpus counts word forms, not nouns, so some
 frequencies include other parts of speech (fakat is mostly the conjunction
 "but", rahat mostly the adjective "comfortable", kat also a verb). This
@@ -143,6 +150,8 @@ def main():
     print("\n  RMSD type / tok = distance of the four means from the real words'")
     print("  type and token profiles. drift = change in a mean over the last %d epochs."
           % (S09.EPOCHS - S09.CHECKPOINT))
+    print("  Token-trained means wobble by about .05 without trend (checked to 240")
+    print("  epochs); the h-vs-k orderings held at every checkpoint.")
     C.write_tsv(os.path.join(OUT, "15_token_training.tsv"), rows)
     print("\n  wrote output/15_token_training.tsv (%d rows)" % len(rows))
 
