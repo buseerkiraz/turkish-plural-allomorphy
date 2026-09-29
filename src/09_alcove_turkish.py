@@ -67,18 +67,19 @@ def _init(pool):
 
 
 def run_learner(job):
-    """job = (vocab size, lateral condition, learner k[, parameters]). The
-    optional parameters default to PARAMS; Stage 12 passes other settings."""
+    """job = (vocab size, lateral condition, learner k[, parameters[, weighting]]).
+    Parameters default to PARAMS (Stage 12 passes others); weighting defaults
+    to "type" (Stage 15 passes "token" and "logtoken")."""
     vocab_size, laterals, k = job[:3]
     params = job[3] if len(job) > 3 else PARAMS
+    weighting = job[4] if len(job) > 4 else "type"
     rng, vocab = T.learner(_POOL, vocab_size, laterals, k)
 
     net = Alcove(sorted({w["vec"] for w in vocab}), 2, **params)
+    epoch = T.epoch_sampler(vocab, weighting)
     halfway = None
     for ep in range(EPOCHS):
-        order = vocab[:]
-        rng.shuffle(order)
-        for w in order:
+        for w in epoch(rng):
             net.train(w["vec"], w["y"])
         if ep + 1 == CHECKPOINT:
             halfway = {lv: net.predict(v)[1] for lv, v in _POOL["nonce"].items()}

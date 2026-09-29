@@ -10,7 +10,7 @@ Niyousha Mojoudi, Buse Erkiraz
 
 Python 3.7 or newer. No packages need to be installed.
 Stage 00 needs network access; every later stage is offline. A full run takes
-about 45 minutes once the data is cached, almost all of it stages 09, 11 and 12 (model training, run in parallel on all cores); stages 00–08 and 10 take under a minute, plus roughly a minute the first time
+about an hour once the data is cached, almost all of it stages 09, 11, 12 and 15 (model training, run in parallel on all cores); stages 00–08 and 10 take under a minute, plus roughly a minute the first time
 for the 33 MB of downloads.
 
 macOS / Linux:
@@ -68,9 +68,10 @@ dataset and test items needed to make them diverge measurably.
 | 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
 | 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
 | 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
+| 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with c, φ and λw halved and doubled, with slow attention, and with attention off |
 | 13 | `13_human_survey.py` | Scores the 97 human wug-test responses and reports P(-ler) per cue level and per participant |
 | 14 | `14_frequency.py` | Type-weighted vs token-weighted lexical rates, against the human profile |
-| 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with c, φ and λw halved and doubled, with slow attention, and with attention off |
+| 15 | `15_token_training.py` | Trains both models with type, token and log-token presentation of the same vocabularies (`training_data.epoch_sampler`) |
 
 ## Figures
 
@@ -135,7 +136,7 @@ never run the pipeline.
   (331 regular nouns carry it), so the morphology is not the cue.
 - The cue is the segment immediately before `-at`: a vowel, `/h/`, or a dorsal.
   Inside that class **34/84 items are exceptions (40.5%)**; outside it **2/210
-  (0.9%)**. phi = 0.545, recall 94.4%.
+  (1.0%)**. phi = 0.545, recall 94.4%.
 - **The lateral cue is circular and unusable.** TELL writes dark `ɫ` after front
   vowels in 369 of 370 cases, which is phonetically wrong, so its `l`/`ɫ`
   contrast tracks harmony class rather than sound. Lateral-final items remain as
@@ -164,11 +165,12 @@ never run the pipeline.
 | `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
 | `output/10_rulex_benchmarks.tsv` | RULEX on the Medin & Schaffer 5-4 structure and the six SHJ types, beside the published values |
 | `output/11_rulex_nonce.tsv` | RULEX P(-ler) per learner and cue level, for the main and three sensitivity parameter settings |
+| `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the nine parameter settings |
 | `output/13_human_responses.tsv` | One row per response: participant, item, cue level, -ler coded 0/1 |
 | `output/13_human_profiles.tsv` | Per-participant cue rate and profile type |
 | `output/13_human_by_cue_level.tsv` | The human profile the models must match |
 | `output/14_frequency_rates.tsv` | Type and token exception rates per cue level |
-| `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the nine parameter settings |
+| `output/15_token_training.tsv` | ALCOVE and RULEX P(-ler) per learner and cue level under type, token and log-token training |
 
 ## Design decisions encoded in the code
 

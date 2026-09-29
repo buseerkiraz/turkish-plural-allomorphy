@@ -20,6 +20,7 @@ STAGES=(
   "12_alcove_sensitivity.py"
   "13_human_survey.py"
   "14_frequency.py"
+  "15_token_training.py"
 )
 
 for s in "${STAGES[@]}"; do

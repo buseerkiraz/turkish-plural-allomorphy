@@ -56,6 +56,40 @@ def learner(pool, vocab_size, laterals, k):
     return rng, weighted_sample(words, weights, vocab_size, rng)
 
 
+WEIGHTINGS = ["type", "token", "logtoken"]
+
+
+def epoch_sampler(vocab, weighting):
+    """Return f(rng) -> the words presented in one epoch.
+
+    type      every word once, in random order (the scheme of Stages 09 and 11)
+    token     len(vocab) draws with replacement, P proportional to corpus
+              frequency: common words are practised more, as in real exposure
+    logtoken  the same with P proportional to log(1 + frequency), the usual
+              compromise between the two
+
+    "type" consumes the generator exactly as Stages 09 and 11 always have, so
+    their results are unchanged by this option existing.
+    """
+    if weighting == "type":
+        def sample(rng):
+            order = vocab[:]
+            rng.shuffle(order)
+            return order
+        return sample
+    if weighting == "token":
+        w = [float(x["freq"]) for x in vocab]
+    elif weighting == "logtoken":
+        w = [math.log1p(x["freq"]) for x in vocab]
+    else:
+        raise ValueError("unknown weighting: %s" % weighting)
+    cum, total = [], 0.0
+    for x in w:
+        total += x
+        cum.append(total)
+    return lambda rng: rng.choices(vocab, cum_weights=cum, k=len(vocab))
+
+
 def load():
     """(all words, words heard in the corpus, pool). The pool holds the
     sampling frame per lateral condition, the nonce vectors per cue level and

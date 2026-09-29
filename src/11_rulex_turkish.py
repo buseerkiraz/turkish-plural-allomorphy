@@ -71,14 +71,16 @@ def tag(params):
 
 
 def run_learner(job):
-    vocab_size, laterals, k, params = job
+    """job = (vocab size, lateral condition, learner k, parameters[, weighting]).
+    weighting defaults to "type"; Stage 15 passes "token" and "logtoken"."""
+    vocab_size, laterals, k, params = job[:4]
+    weighting = job[4] if len(job) > 4 else "type"
     rng, vocab = T.learner(_POOL, vocab_size, laterals, k)
     m = Rulex(len(C.DIMENSION_NAMES), rng, lwind=vocab_size, **params)
+    epoch = T.epoch_sampler(vocab, weighting)
     halfway = None
     for ep in range(EPOCHS):
-        order = vocab[:]
-        rng.shuffle(order)
-        for w in order:
+        for w in epoch(rng):
             m.train(w["vec"], w["y"])
         if ep + 1 == CHECKPOINT:
             halfway = {lv: m.p_category(v)[1] for lv, v in _POOL["nonce"].items()}
