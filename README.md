@@ -68,6 +68,8 @@ dataset and test items needed to make them diverge measurably.
 | 09 | `09_alcove_turkish.py` | Trains ALCOVE on frequency-weighted Turkish vocabularies and tests it on the nonce items |
 | 10 | `10_rulex_benchmark.py` | Validates the RULEX implementation (`rulex.py`) against Nosofsky, Palmeri & McKinley's (1994) published results |
 | 11 | `11_rulex_turkish.py` | Trains RULEX on the same vocabularies as stage 09 (`training_data.py`) and tests it on the nonce items |
+| 13 | `13_human_survey.py` | Scores the 97 human wug-test responses and reports P(-ler) per cue level and per participant |
+| 14 | `14_frequency.py` | Type-weighted vs token-weighted lexical rates, against the human profile |
 | 12 | `12_alcove_sensitivity.py` | Reruns the 5,000-word ALCOVE condition with c, φ and λw halved and doubled, with slow attention, and with attention off |
 
 ## Figures
@@ -162,6 +164,10 @@ never run the pipeline.
 | `output/09_alcove_nonce.tsv` | ALCOVE P(-ler) for each simulated learner and nonce cue level |
 | `output/10_rulex_benchmarks.tsv` | RULEX on the Medin & Schaffer 5-4 structure and the six SHJ types, beside the published values |
 | `output/11_rulex_nonce.tsv` | RULEX P(-ler) per learner and cue level, for the main and three sensitivity parameter settings |
+| `output/13_human_responses.tsv` | One row per response: participant, item, cue level, -ler coded 0/1 |
+| `output/13_human_profiles.tsv` | Per-participant cue rate and profile type |
+| `output/13_human_by_cue_level.tsv` | The human profile the models must match |
+| `output/14_frequency_rates.tsv` | Type and token exception rates per cue level |
 | `output/12_alcove_sensitivity.tsv` | ALCOVE P(-ler) per learner and cue level for each of the nine parameter settings |
 
 ## Design decisions encoded in the code

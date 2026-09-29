@@ -42,7 +42,7 @@ FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 # nuda 3 are kept as negligible; tıza and zoma have none. The models are
 # unaffected: all stems code identically, since the features read only the
 # final syllable.
-STEMS = ["kuna", "tıza", "zoma", "nuda"]
+STEMS = ["teşa", "deşa", "şida", "yeşa"]
 # (spelling of the segment, its TELL symbol, label, class, real-word models).
 # The lexical exception rate for each segment is read from Stage 03's cleaned
 # /at/ table rather than typed in, so it cannot go stale. The middle levels are

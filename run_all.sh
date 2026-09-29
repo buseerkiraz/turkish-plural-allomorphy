@@ -18,6 +18,8 @@ STAGES=(
   "10_rulex_benchmark.py"
   "11_rulex_turkish.py"
   "12_alcove_sensitivity.py"
+  "13_human_survey.py"
+  "14_frequency.py"
 )
 
 for s in "${STAGES[@]}"; do
