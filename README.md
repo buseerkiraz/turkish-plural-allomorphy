@@ -72,6 +72,7 @@ dataset and test items needed to make them diverge measurably.
 | 13 | `13_human_survey.py` | Scores the 97 human wug-test responses and reports P(-ler) per cue level and per participant |
 | 14 | `14_frequency.py` | Type-weighted vs token-weighted lexical rates, against the human profile |
 | 15 | `15_token_training.py` | Trains both models with type, token and log-token presentation of the same vocabularies (`training_data.epoch_sampler`) |
+| 16 | `16_model_vs_human.py` | Compares both models with the human data: cue-level means (RMSD, r) and the share of individuals answering all -lar, all -ler or mixed |
 
 ## Figures
 
@@ -171,6 +172,7 @@ never run the pipeline.
 | `output/13_human_by_cue_level.tsv` | The human profile the models must match |
 | `output/14_frequency_rates.tsv` | Type and token exception rates per cue level |
 | `output/15_token_training.tsv` | ALCOVE and RULEX P(-ler) per learner and cue level under type, token and log-token training |
+| `output/16_model_vs_human.tsv` | Model-vs-human fit per model and training scheme, and individual-level response shapes |
 
 ## Design decisions encoded in the code
 
