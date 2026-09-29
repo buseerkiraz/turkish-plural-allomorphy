@@ -43,7 +43,7 @@ OUT = os.path.join(HERE, "..", "output")
 
 LEARNERS = 100           # per condition; RULEX is cheap and highly idiosyncratic
 EPOCHS = 80              # same as Stage 09. Checked to 160: no condition mean
-                         # for kunaat moved more than .04 between 80 and 160.
+                         # for teşaat moved more than .04 between 80 and 160.
 CHECKPOINT = 60          # convergence = change over the last quarter. Small
                          # vocabularies are still settling at epoch 40, so a
                          # half-way comparison overstates late drift.

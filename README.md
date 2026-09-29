@@ -89,7 +89,7 @@ python3 -m venv .venv && .venv/bin/pip install matplotlib
 | `fig1_alcove_benchmark` | ALCOVE on the six SHJ types, with attention learning and with it frozen |
 | `fig2_rulex_benchmark` | RULEX against Nosofsky et al.'s (1994) published 5-4 predictions, and its SHJ ordering |
 | `fig3_nonce_profiles` | Both models on the nonce items, beside the dictionary rates and the Tolerance Principle, per vocabulary size and lateral condition |
-| `fig4_learner_split` | *kunaat* per learner: ALCOVE's graded answers vs RULEX's all-or-none ones |
+| `fig4_learner_split` | *teşaat* per learner: ALCOVE's graded answers vs RULEX's all-or-none ones |
 
 Each is written as PNG and PDF. Colours follow one rule across figures:
 ALCOVE is always blue, RULEX always orange.
@@ -134,7 +134,7 @@ never run the pipeline.
 - Within t-final, the Arabic `-At` suffix has **100% recall but 11.7% precision**
   (331 regular nouns carry it), so the morphology is not the cue.
 - The cue is the segment immediately before `-at`: a vowel, `/h/`, or a dorsal.
-  Inside that class **34/84 items are exceptions (40.5%)**; outside it **2/211
+  Inside that class **34/84 items are exceptions (40.5%)**; outside it **2/210
   (0.9%)**. phi = 0.545, recall 94.4%.
 - **The lateral cue is circular and unusable.** TELL writes dark `ɫ` after front
   vowels in 369 of 370 cases, which is phonetically wrong, so its `l`/`ɫ`
@@ -146,7 +146,7 @@ never run the pipeline.
   (84 items, 34 `-ler`) licenses **no productive rule**. Its sub-classes differ:
   hiatus licenses a local `-ler` sub-rule (12/17), velar /k/ keeps `-lar` (5/24),
   and /h/ licenses neither (9/22). So the Tolerance Principle predicts a stepped
-  profile on the nonce items, with *kunakat* falling with the no-cue items.
+  profile on the nonce items, with *teşakat* falling with the no-cue items.
 - Plural spot-check: **269/280 testable items agree** with TELL's
   accusative-based class (96.1%); 99/102 within the `/at/` class.
 
@@ -185,8 +185,8 @@ dimension in stage 06 is a property of the final syllable.
 **The segment before the final vowel is three dimensions, not one.**
 `D2_onset_vowel`, `D3_onset_h` and `D4_onset_dorsal` are separate, mutually
 exclusive flags. An earlier version had a single D2 (vowel or /h/) and no
-velar-dorsal dimension. That coded the nonce items *kunaat* and *kunahat*
-identically, and *kunakat* identically to the no-cue items, so neither model
+velar-dorsal dimension. That coded the nonce items *teşaat* and *teşahat*
+identically, and *teşakat* identically to the no-cue items, so neither model
 could have reproduced the 71/41/21 ordering the nonce test is built to detect.
 The features are now defined once, in `common.MODEL_DIMENSIONS`. Stages 06 and
 07 both call that function, and stage 07 stops the run if any two cue levels
@@ -195,7 +195,7 @@ share a feature vector. `AT_CUE_CLASS` (vowel, /h/ or any dorsal) is still the
 
 **The models are told a word ends in /at/ (`D9_at_final`).** The predicted
 levels (71/41/21%) and the Tolerance Principle verdicts are stated over /at/-final
-words only. Without D9, a nonce item like *kunaat* shares its feature vector with
+words only. Without D9, a nonce item like *teşaat* shares its feature vector with
 every back-vowel hiatus word, most of which do not end in /at/, and the -ler
 rates a model can see for the four cue levels drop to 34/18/6/0.6%. A first
 ALCOVE run without D9 tracked exactly those diluted rates. D9 does not leak the
@@ -222,7 +222,7 @@ Choice probabilities agreed to within 1e-10 on every trial.
 matter.** The attention rate was fitted to a 256-trial task. Over up to 400,000
 Turkish trials attention grows without bound (about 25 per dimension, from 0.1),
 so ALCOVE answers a nonce item only from exemplars with an identical feature
-vector: they carry 100% of *kunaat*'s activation (stage 12, "exact"). This is
+vector: they carry 100% of *teşaat*'s activation (stage 12, "exact"). This is
 possible because the ten features are coarse enough that every nonce item has
 real-word twins. Stage 12 shows the result does not depend on it: with slow
 attention (λα = .0033) identical exemplars carry 87% and similar ones the rest;

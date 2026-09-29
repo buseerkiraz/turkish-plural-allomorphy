@@ -14,7 +14,7 @@ and a PDF of each figure next to this script.
   fig2_rulex_benchmark    RULEX against Nosofsky et al.'s (1994) published values
   fig3_nonce_profiles     both models on the nonce items, against the real /at/
                           words and the Tolerance Principle, per vocabulary size
-  fig4_learner_split      kunaat, one bar per learner answer: graded vs all-or-none
+  fig4_learner_split      teşaat, one bar per learner answer: graded vs all-or-none
 """
 import collections
 import os
@@ -39,7 +39,7 @@ GRID, AXIS = "#e1e0d9", "#c3c2b7"
 SLOTS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300"]
 ALCOVE, RULEX, TP = SLOTS[0], SLOTS[1], SLOTS[2]
 MAIN_RULEX = "pstor=0.80 capac=0.40"
-LEVEL_TICKS = ["kunaat\nvowel", "kunahat\n/h/", "kunakat\n/k/", "kunasat…\nno cue"]
+LEVEL_TICKS = ["teşaat\nvowel", "teşahat\n/h/", "teşakat\n/k/", "teşasat…\nno cue"]
 
 plt.rcParams.update({
     "font.family": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
@@ -248,7 +248,7 @@ def fig4(vocab=5000, lat="with", level="hiatus"):
                         fontsize=7.5, color=INK2)
         ax.set_xlim(0, 1)
         ax.set_xticks([0, .2, .4, .6, .8, 1])
-        ax.set_xlabel("One learner's P(-ler) for kunaat")
+        ax.set_xlabel("One learner's P(-ler) for teşaat")
         ax.set_title("%s  (%d learners)" % (name, n), loc="left")
     axes[0].set_ylabel("% of learners")
     axes[0].set_ylim(0, 105)

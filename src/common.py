@@ -62,7 +62,7 @@ AT_CUE_CLASS = {"a", "h"} | DORSALS
 GUTTURAL_ONSET = AT_CUE_CLASS | VOWELS   # legacy alias: the widest variant
 # Exploratory Stage 02 cue only. This used to be the single model dimension
 # D2, which lumped vowel and /h/ together and left velar dorsals uncoded. That
-# made the nonce items kunaat and kunahat identical in model space, and kunakat
+# made the nonce items teşaat and teşahat identical in model space, and teşakat
 # identical to the no-cue items, so the 71/41/21 ordering the nonce test exists
 # to probe was invisible to both models. Replaced by three onset dimensions.
 VOWEL_OR_H_ONSET = VOWELS | {"h"}
@@ -176,7 +176,7 @@ MODEL_DIMENSIONS = [
      lambda c: last_vowel(c) in ROUND_V),
     ("D8_voiced_final_c", "DISTRACTOR: final C voiced (governs kitap~kitabi, not harmony)",
      lambda c: final_consonant(c) in VOICED_C),
-    # Without D9 a nonce item like kunaat shares its vector with every back
+    # Without D9 a nonce item like teşaat shares its vector with every back
     # hiatus word, most of which are not /at/-final, so a model sees -ler rates
     # of 34/18/6/0.6% instead of the /at/-internal 71/41/21/~1% the predictions
     # are stated over. D9 lets a model form the /at/ neighbourhood. It does not

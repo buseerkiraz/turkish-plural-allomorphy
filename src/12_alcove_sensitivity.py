@@ -21,7 +21,7 @@ What counts as "the result", read off each setting:
   KUNAKAT   velar dorsal above no cue: the item that separates ALCOVE from the
             Tolerance Principle, which puts it level with no cue
   FIT       RMSD from the dictionary rates of the four levels
-  EXACT     share of kunaat's hidden activation from exemplars with an identical
+  EXACT     share of teşaat's hidden activation from exemplars with an identical
             feature vector: 1.0 means pure lookup, lower means real similarity
 """
 import collections
@@ -98,20 +98,20 @@ def main():
                                  **{k: "%g" % v for k, v in params.items()}))
 
     print("\n  order  = mean P(-ler) falls hiatus > /h/ > velar dorsal > no cue")
-    print("  k>none = learners whose kunakat P(-ler) is above their no-cue P(-ler)")
+    print("  k>none = learners whose teşakat P(-ler) is above their no-cue P(-ler)")
     print("  RMSD   = distance of the four means from the dictionary rates")
-    print("  exact  = share of kunaat's activation from identical-vector exemplars")
+    print("  exact  = share of teşaat's activation from identical-vector exemplars")
     print("  drift  = largest change in a mean over the last %d epochs"
           % (S09.EPOCHS - S09.CHECKPOINT))
 
     held = [n for n, o, k, _ in summary if o and k == LEARNERS]
     unsettled = [n for n, _, _, d in summary if d > S09.CONVERGENCE_TOL]
     print("\n  VERDICT")
-    print("    ordering and kunakat > no cue hold for every learner in %d of %d "
+    print("    ordering and teşakat > no cue hold for every learner in %d of %d "
           "settings" % (len(held), len(SETTINGS)))
     for n, o, k, _ in summary:
         if n not in held:
-            print("      not in: %-16s (order %s, kunakat above no cue in %d/%d)"
+            print("      not in: %-16s (order %s, teşakat above no cue in %d/%d)"
                   % (n, "holds" if o else "breaks", k, LEARNERS))
     if unsettled:
         print("    still moving by more than %.2f after %d epochs: %s"

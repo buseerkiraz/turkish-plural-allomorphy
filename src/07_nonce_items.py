@@ -36,12 +36,16 @@ OUT = os.path.join(HERE, "..", "output")
 TELL = os.path.join(HERE, "..", "data", "tell")
 FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 
-# "zoma" replaced "bora", which is a real word (storm; also a common name) with
-# 505 corpus tokens, so speakers would parse boraat as bora + something. The
-# stems themselves are screened too: kuna 31 tokens (Croatian currency) and
-# nuda 3 are kept as negligible; tıza and zoma have none. The models are
-# unaffected: all stems code identically, since the features read only the
-# final syllable.
+# These are the four stems actually administered in the survey (Stage 13).
+# They replaced an earlier set that was harmonically back-vowel throughout.
+# That is the shape of a NATIVE Turkish root, whereas every real member of
+# this exception class is an Arabic loan and 70% of them are disharmonic
+# (seyahat, dikkat, cemaat, ziraat). Native-looking stimuli invite the default
+# -lAr answer before the cue is consulted, risking a floor effect. All four
+# below are disharmonic, none is a real word, none is within one edit of a
+# real word, and none of their stems is a real word on its own.
+# The models are unaffected by the change: all stems code identically, since
+# the feature dimensions read only the final syllable.
 STEMS = ["teşa", "deşa", "şida", "yeşa"]
 # (spelling of the segment, its TELL symbol, label, class, real-word models).
 # The lexical exception rate for each segment is read from Stage 03's cleaned
@@ -204,8 +208,8 @@ def main():
   How a model treats that ordering is the whole experiment.
 
   ALCOVE    A graded response tracking summed similarity to stored exceptions,
-            so it SHOULD reproduce the ordering: kunaat > kunahat > kunakat >
-            no-cue, with kunakat above the no-cue items.
+            so it SHOULD reproduce the ordering: teşaat > teşahat > teşakat >
+            no-cue, with teşakat above the no-cue items.
 
   RULEX     Each simulated learner is categorical: it either holds a rule that
             sends a cue level to -ler or it does not, and stored exceptions are
@@ -224,7 +228,7 @@ def main():
             no-cue items, and levels with no productive rule come out
             unstable (variable across and within speakers).
 
-  So the discriminating item is kunakat. ALCOVE puts it above the no-cue items;
+  So the discriminating item is teşakat. ALCOVE puts it above the no-cue items;
   the Tolerance Principle puts it with them. The hiatus-vs-/h/ gap separates a
   smooth slope from a step.
 """ % (" / ".join("%.0f%%" % items[i]["lexical_exception_rate_pct"] for i in range(3)),
