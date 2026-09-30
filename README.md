@@ -15,17 +15,26 @@ learner exposed to real word frequencies would. They give graded, mixed
 answers that follow token frequency, and not the all-or-none answers a
 rule-plus-exception learner produces.
 
-## Team
+## Team and contribution statement
 
 **Niyousha Mojoudi** and **Buse Erkiraz**.
 
-- **Buse:** the lexical pipeline (stages 00–07), the nonce stimuli, and the
-  survey design and data collection. Also the human analysis (stage 13) and
-  the frequency analysis (stage 14).
-- **Niyousha:** the model features and training labels (stage 06
+We, the undersigned, confirm that we worked on this project as a group and
+that the parts below were contributed by the members named.
+
+- **Buse Erkiraz:** the lexical pipeline (stages 00–07), the nonce stimuli,
+  and the survey design and data collection. Also the human analysis
+  (stage 13) and the frequency analysis (stage 14). In the report: Background
+  (Section 2), The lexicon (Section 3) and The human experiment (Section 5).
+- **Niyousha Mojoudi:** the model features and training labels (stage 06
   revisions), both model implementations and their validation (stages 08
   and 10), the Turkish training and robustness runs (09, 11, 12, 15), the
-  model-vs-human comparison (16), the figures and the statistics.
+  model-vs-human comparison (16), the figures and the statistics. In the
+  report: The models (Section 4), Results (Section 6) and the Appendix.
+- **Both:** the report's Introduction, Discussion, Limitations and
+  Conclusion.
+
+Signed: Niyousha Mojoudi, Buse Erkiraz
 
 ## Contents
 
