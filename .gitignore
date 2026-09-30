@@ -21,3 +21,5 @@ output/*.tsv
 logs/
 
 !data/survey_responses.csv
+# Optional R library for stats/mixed_model.R (lme4)
+.Rlib/

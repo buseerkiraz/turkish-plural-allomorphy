@@ -15,6 +15,7 @@ and a PDF of each figure next to this script.
   fig3_nonce_profiles     both models on the nonce items, against the real /at/
                           words and the Tolerance Principle, per vocabulary size
   fig4_learner_split      teşaat, one bar per learner answer: graded vs all-or-none
+  fig5_individuals        people vs models: all -lar / mixed / all -ler per cue level
 """
 import collections
 import os
@@ -260,12 +261,66 @@ def fig4(vocab=5000, lat="with", level="hiatus"):
     save(fig, "fig4_learner_split")
 
 
+# ------------------------------------------------------------------ figure 5
+def fig5():
+    rows = [r for r in read("16_model_vs_human.tsv") if r["part"] == "individuals"]
+    n_people = len(read("13_human_profiles.tsv"))
+    rerr = next(float(r["human_all"]) for r in read("13_human_by_cue_level.tsv")
+                if r["cue_level"] == "no cue")
+    shown = [("people", "People (%d)" % n_people),
+             ("ALCOVE type", "ALCOVE, type training"),
+             ("ALCOVE token", "ALCOVE, token training"),
+             ("RULEX+err type", "RULEX + response error, type"),
+             ("RULEX+err token", "RULEX + response error, token")]
+    levels = [("hiatus", "Vowel before -at (teşaat)"), ("/h/", "/h/ (teşahat)"),
+              ("velar dorsal", "/k/ (teşakat)")]
+    get = {(r["model"], r["level"]): r for r in rows}
+    LAR, MIX, LER = "#1baf7a", AXIS, "#4a3aa7"
+    fig, axes = plt.subplots(1, 3, figsize=(10.4, 3.3), sharey=True)
+    for ax, (lv, title) in zip(axes, levels):
+        for i, (key, _) in enumerate(shown):
+            r = get[(key, lv)]
+            parts = [(float(r["all_lar"]), LAR, INK), (float(r["mixed"]), MIX, INK),
+                     (float(r["all_ler"]), LER, SURFACE)]
+            left = 0.0
+            y = len(shown) - 1 - i
+            for v, colour, txt in parts:
+                ax.barh(y, v, left=left, color=colour, height=0.62,
+                        edgecolor=SURFACE, linewidth=1.5)
+                if v >= 0.08:
+                    ax.text(left + v / 2, y, "%.0f%%" % (100 * v), ha="center",
+                            va="center", fontsize=7.5, color=txt)
+                left += v
+        ax.set_xlim(0, 1)
+        ax.set_xticks([0, .5, 1])
+        ax.set_xticklabels(["0", "50%", "100%"])
+        ax.grid(False)
+        ax.set_title(title, loc="left", fontsize=9.5)
+    axes[0].set_yticks(range(len(shown)))
+    axes[0].set_yticklabels([lab for _, lab in reversed(shown)], fontsize=8.5)
+    axes[0].tick_params(axis="y", length=0)
+    from matplotlib.patches import Patch
+    fig.legend([Patch(color=LAR), Patch(color=MIX), Patch(color=LER)],
+               ["all four -lar", "mixed", "all four -ler"], ncol=3, loc="upper left",
+               bbox_to_anchor=(0.2, 1.02), fontsize=8.5)
+    fig.suptitle("Most people mix -lar and -ler within a cue level; RULEX learners "
+                 "cannot, even with response error", x=0.02, ha="left", y=1.1,
+                 fontsize=11)
+    fig.text(0.02, -0.05, "Share of individuals answering a level's four items all -lar, "
+             "mixed or all -ler. Models scored as participants answering four items with "
+             "their P(-ler); RULEX response error = people's no-cue -ler rate (%.1f%%). "
+             "Stage 16." % rerr, color=MUTED, fontsize=7.5)
+    fig.tight_layout()
+    save(fig, "fig5_individuals")
+
+
 def main():
     print("figures:")
     fig1()
     fig2()
     fig3()
     fig4()
+    fig5()
 
 
 if __name__ == "__main__":

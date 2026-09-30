@@ -1,0 +1,69 @@
+MIXED-EFFECTS LOGISTIC REGRESSION, human responses (Stage 13)
+2328 responses, 97 participants (51 with linguistics training), 24 items
+
+=== 1. MAIN MODEL: response ~ cue + linguistics + (1|participant) + (1|item) ===
+Does cue level matter at all? Likelihood-ratio test against a model without it:
+Data: data
+Models:
+m0: response_ler ~ ling + (1 | participant) + (1 | item)
+m: response_ler ~ cue + ling + (1 | participant) + (1 | item)
+   npar    AIC    BIC  logLik deviance  Chisq Df Pr(>Chisq)    
+m0    4 1991.2 2014.2 -991.59   1983.2                         
+m     7 1932.2 1972.5 -959.13   1918.2 64.935  3   5.18e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Each cue level against no cue, and linguistics training (odds ratios, 95% CI):
+                odds_ratio ci_low ci_high     z        p
+cue/h/                9.40   5.93   14.90  9.53 1.58e-21
+cuevelar dorsal      21.29  13.39   33.84 12.94 2.83e-38
+cuehiatus            54.25  33.48   87.90 16.22 3.74e-59
+lingY                 1.71   1.02    2.86  2.03 4.27e-02
+
+Random-effect SDs (log-odds): participant 1.14, item 0.27
+
+=== 2. BETWEEN CUE LEVELS (reference /h/) ===
+velar dorsal vs /h/ is the type/token reversal: the lexicon by types puts /h/
+above /k/, the lexicon by tokens and the humans put /k/ above /h/.
+                odds_ratio ci_low ci_high    z        p
+cuevelar dorsal       2.27   1.38    3.73 3.22 1.30e-03
+cuehiatus             5.77   3.46    9.62 6.73 1.68e-11
+
+hiatus vs velar dorsal (contrast within the same model):
+               odds_ratio ci_low ci_high    z        p
+hiatus - velar       2.55   1.54    4.21 3.66 0.000253
+
+=== 3. DOES LINGUISTICS TRAINING CHANGE THE CUE EFFECT? ===
+Likelihood-ratio test, cue x linguistics interaction:
+Data: data
+Models:
+m: response_ler ~ cue + ling + (1 | participant) + (1 | item)
+mi: response_ler ~ cue * ling + (1 | participant) + (1 | item)
+   npar    AIC    BIC  logLik deviance  Chisq Df Pr(>Chisq)   
+m     7 1932.2 1972.5 -959.13   1918.2                        
+mi   10 1924.0 1981.6 -952.02   1904.0 14.221  3   0.002619 **
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+                      odds_ratio ci_low ci_high    z        p
+cue/h/:lingY                3.48   1.74    6.95 3.54 0.000406
+cuevelar dorsal:lingY       1.28   0.65    2.51 0.72 0.471000
+cuehiatus:lingY             1.62   0.80    3.28 1.34 0.181000
+
+=== 4. ROBUSTNESS ===
+a) Without participants under 18 (1 excluded):
+                odds_ratio ci_low ci_high     z        p
+cue/h/                8.92   5.62   14.13  9.31 1.29e-20
+cuevelar dorsal      20.42  12.86   32.43 12.78 2.13e-37
+cuehiatus            53.11  32.79   86.00 16.15 1.14e-58
+lingY                 1.66   0.99    2.80  1.92 5.43e-02
+   velar dorsal vs /h/ without under-18s:
+                odds_ratio ci_low ci_high    z       p
+cuevelar dorsal       2.29   1.39    3.77 3.26 0.00112
+
+b) By-participant random slopes for cue (each person their own cue effect):
+   singular fit: FALSE (TRUE means the slopes are not identifiable;
+   the intercept-only model above is then the one to report)
+                odds_ratio ci_low ci_high     z        p
+cueno cue             0.09   0.04    0.17 -7.34 2.09e-13
+cuevelar dorsal       2.08   1.13    3.83  2.34 1.93e-02
+cuehiatus             6.56   3.48   12.38  5.82 6.04e-09

@@ -92,9 +92,30 @@ python3 -m venv .venv && .venv/bin/pip install matplotlib
 | `fig2_rulex_benchmark` | RULEX against Nosofsky et al.'s (1994) published 5-4 predictions, and its SHJ ordering |
 | `fig3_nonce_profiles` | Both models on the nonce items, beside the dictionary rates and the Tolerance Principle, per vocabulary size and lateral condition |
 | `fig4_learner_split` | *teşaat* per learner: ALCOVE's graded answers vs RULEX's all-or-none ones |
+| `fig5_individuals` | People vs models: share of individuals answering each cue level all -lar, mixed or all -ler (stage 16) |
 
 Each is written as PNG and PDF. Colours follow one rule across figures:
 ALCOVE is always blue, RULEX always orange.
+
+## Statistics
+
+`stats/mixed_model.R` fits a mixed-effects logistic regression to the human
+responses (stage 13): response (-ler = 1) by cue level and linguistics training,
+with random intercepts for participant and item, using `lme4`. Its output is
+committed as `stats/mixed_model_results.txt`, so it can be read without R.
+Like the figures, it needs a package the pipeline does not, installed into a
+project-local library (see the comments at the top of the script for the
+R 4.3 install route):
+
+```bash
+Rscript stats/mixed_model.R
+```
+
+It tests whether cue level matters at all, each cue level against no cue, the
+contrasts between cue levels (including /k/ vs /h/, the type-vs-token
+reversal), whether linguistics training changes the cue effect, and two
+robustness checks: without the one participant under 18, and with
+by-participant random slopes for cue.
 
 ## Data sources
 
