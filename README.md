@@ -248,7 +248,9 @@ stage so both models see identical inputs).
   the surveyed words and the generated words ever disagree.
 - **Stems.** *teşa-, deşa-, şida-, yeşa-*: disharmonic (front then back
   vowel), like the Arabic loans in the exception class (*seyahat, dikkat*) and
-  unlike native roots. None is a real word or within one edit of one. The stems
+  unlike native roots. None is a real word, and stage 07 rejects any item
+  within one edit of a corpus word seen 10+ times (it rejected *nefa-*:
+  *nefakat* ~ *refakat*). The stems
   do not affect the models, whose features read only the final syllable.
 - **Participants.** 97 native Turkish speakers, aged 17–59 (median 23). 51
   have studied linguistics or Turkish philology. One participant was 17 and is

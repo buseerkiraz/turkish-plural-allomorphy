@@ -22,7 +22,9 @@ differently to inputs it cannot tell apart.
 
 Screening: every candidate is checked against the complete TELL lexeme list and
 against the ~2.0m-type corpus.  Any hit is rejected, because a "nonce" word that
-turns out to be real destroys the item.
+turns out to be real destroys the item.  So is any item within one insertion,
+deletion or substitution of a corpus word seen at least NEAR_MIN times: a
+participant could read it as a misspelling of that word and copy its plural.
 """
 import csv
 import os
@@ -43,10 +45,16 @@ FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 # (seyahat, dikkat, cemaat, ziraat). Native-looking stimuli invite the default
 # -lAr answer before the cue is consulted, risking a floor effect. All four
 # below are disharmonic, none is a real word, none is within one edit of a
-# real word, and none of their stems is a real word on its own.
+# real word, and none of their stems is a real word on its own. An earlier
+# candidate, nefa-, failed the one-edit screen (nefaat ~ şefaat, nefahat ~
+# sefahat, nefakat ~ refakat).
 # The models are unaffected by the change: all stems code identically, since
 # the feature dimensions read only the final syllable.
 STEMS = ["teşa", "deşa", "şida", "yeşa"]
+# Corpus frequency a one-edit neighbour needs before it counts as a near miss.
+# Below this, the list is mostly typos and names no participant would know.
+NEAR_MIN = 10
+TR_LETTERS = "abcçdefgğhıijklmnoöprsştuüvyz"
 # (spelling of the segment, its TELL symbol, label, class, real-word models).
 # The lexical exception rate for each segment is read from Stage 03's cleaned
 # /at/ table rather than typed in, so it cannot go stale. The middle levels are
@@ -104,22 +112,44 @@ def load_tell_lexemes():
     return lex
 
 
-def load_freq_keys():
-    keys = set()
+def load_freq():
+    counts = {}
     with open(FREQ, encoding="utf-8", errors="replace") as f:
         for line in f:
             p = line.split()
             if len(p) == 2:
-                keys.add(p[0])
-    return keys
+                counts[p[0]] = int(p[1])
+    return counts
+
+
+def one_edit(form):
+    """Every string one insertion, deletion or substitution away from form."""
+    out = set()
+    for i in range(len(form) + 1):
+        a, b = form[:i], form[i:]
+        if b:
+            out.add(a + b[1:])
+        for ch in TR_LETTERS:
+            out.add(a + ch + b)
+            if b:
+                out.add(a + ch + b[1:])
+    out.discard(form)
+    return out
+
+
+def near_misses(form, freq):
+    """Corpus words within one edit of form, seen at least NEAR_MIN times."""
+    return sorted((w for w in one_edit(form) if freq.get(w, 0) >= NEAR_MIN),
+                  key=lambda w: -freq[w])
 
 
 def main():
     lex = load_tell_lexemes()
-    freq = load_freq_keys()
+    freq = load_freq()
     print("STAGE 07 -- nonce item set")
-    print("  screening against %d TELL lexeme strings and %d corpus types\n"
+    print("  screening against %d TELL lexeme strings and %d corpus types,"
           % (len(lex), len(freq)))
+    print("  and for one-edit neighbours seen at least %d times\n" % NEAR_MIN)
 
     counts = at_class_counts()
     items, rejected = [], []
@@ -131,6 +161,7 @@ def main():
             in_tell = form in lex
             in_corpus = any(form + s in freq for s in
                             ("", "lar", "ler", "ı", "i", "ta", "te"))
+            near = near_misses(form, freq)
             rec = dict(form=form, transcription=transcribe(form), stem=stem,
                        pre_ending_segment=seg or "(vowel)",
                        segment_type=seglabel, cue_class=cls,
@@ -140,16 +171,19 @@ def main():
                        real_word_models=models,
                        in_TELL="Y" if in_tell else "N",
                        in_corpus="Y" if in_corpus else "N",
-                       accepted="N" if (in_tell or in_corpus) else "Y")
+                       near_miss=", ".join(near),
+                       accepted="N" if (in_tell or in_corpus or near) else "Y")
             rec.update(C.model_features(rec["transcription"]))
             (rejected if rec["accepted"] == "N" else items).append(rec)
 
-    print("  %-12s %-18s %-12s %7s %8s %9s" % ("form", "segment type", "cue class",
-                                                "lex %", "in TELL", "in corpus"))
+    print("  %-12s %-18s %-12s %7s %8s %9s  %s" % ("form", "segment type", "cue class",
+                                                    "lex %", "in TELL", "in corpus",
+                                                    "one edit from"))
     for r in items + rejected:
-        print("  %-12s %-18s %-12s %6.1f%% %8s %9s%s"
+        print("  %-12s %-18s %-12s %6.1f%% %8s %9s  %s%s"
               % (r["form"], r["segment_type"], r["cue_class"],
                  r["lexical_exception_rate_pct"], r["in_TELL"], r["in_corpus"],
+                 r["near_miss"] or "-",
                  "   <-- REJECTED" if r["accepted"] == "N" else ""))
 
     print("\n  accepted: %d    rejected: %d" % (len(items), len(rejected)))
