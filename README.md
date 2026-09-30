@@ -277,6 +277,7 @@ python3 -m venv .venv && .venv/bin/pip install matplotlib
 | `fig3_nonce_profiles` | Both models on the nonce items, beside the dictionary rates and the Tolerance Principle, per vocabulary size and lateral condition |
 | `fig4_learner_split` | *teşaat* per learner: ALCOVE's graded answers vs RULEX's all-or-none ones |
 | `fig5_individuals` | People vs models: share of individuals answering each cue level all -lar, mixed or all -ler (stage 16) |
+| `fig6_main_result` | **The main result.** People vs ALCOVE and RULEX on the four cue levels, with type and token training side by side, beside the real words counted the same way |
 
 Each is written as PNG and PDF. Colours follow one rule across figures:
 ALCOVE is always blue, RULEX always orange.

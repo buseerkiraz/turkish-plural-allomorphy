@@ -16,6 +16,7 @@ and a PDF of each figure next to this script.
                           words and the Tolerance Principle, per vocabulary size
   fig4_learner_split      teşaat, one bar per learner answer: graded vs all-or-none
   fig5_individuals        people vs models: all -lar / mixed / all -ler per cue level
+  fig6_main_result        the main result: people vs both models, type and token training
 """
 import collections
 import os
@@ -314,6 +315,78 @@ def fig5():
     save(fig, "fig5_individuals")
 
 
+# ------------------------------------------------------------------ figure 6
+def fig6():
+    """The main result: people and both models on the four cue levels, one
+    panel per presentation scheme, with the real words counted the same way."""
+    levels = T.LEVELS
+    # People: per-participant rate per level, then mean and 95% CI over people.
+    per = collections.defaultdict(lambda: collections.defaultdict(list))
+    for r in read("13_human_responses.tsv"):
+        per[r["participant"]][r["cue_level"]].append(int(r["response_ler"]))
+    people, ci = [], []
+    for lv in levels:
+        xs = [sum(p[lv]) / len(p[lv]) for p in per.values()]
+        m = statistics.mean(xs)
+        people.append(m)
+        ci.append(1.96 * statistics.stdev(xs) / len(xs) ** 0.5)
+    n_people = len(per)
+    # Models (Stage 15, 5,000 words) and the lexicon, per presentation scheme.
+    mod = collections.defaultdict(list)
+    for r in read("15_token_training.tsv"):
+        mod[(r["model"], r["training"], r["cue_level"])].append(float(r["p_ler"]))
+    lex = {r["cue_level"]: r for r in read("14_frequency_rates.tsv")}
+    xs = list(range(len(levels)))
+    ticks = ["teşaat\nvowel", "teşahat\n/h/", "teşakat\n/k/", "teşasat…\nno cue"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 4.1), sharey=True)
+    for ax, (wt, title, lexcol) in zip(axes, [
+            ("type", "Trained on types: ALCOVE puts /h/ above /k/", "type_rate_pct"),
+            ("token", "Trained on tokens: ALCOVE puts /k/ above /h/", "token_rate_pct")]):
+        lexv = [float(lex[lv][lexcol]) / 100 for lv in levels]
+        alc = [statistics.mean(mod[("ALCOVE", wt, lv)]) for lv in levels]
+        rlx = [statistics.mean(mod[("RULEX", wt, lv)]) for lv in levels]
+        series = [
+            ("real -at words (%ss)" % wt, lexv, dict(color=MUTED, ls=(0, (4, 3)), lw=1.3,
+                                                      marker="s", mfc=SURFACE, mec=MUTED, ms=6)),
+            ("RULEX", rlx, dict(color=RULEX, lw=1.8, marker="^", mec=SURFACE, ms=7.5)),
+            ("ALCOVE", alc, dict(color=ALCOVE, lw=1.8, marker="o", mec=SURFACE, ms=7)),
+        ]
+        for name, ys, kw in series:
+            ax.plot(xs, ys, label=name, zorder=3, **kw)
+        ax.errorbar(xs, people, yerr=ci, color=INK, lw=2.2, marker="D", ms=6.5,
+                    mec=SURFACE, capsize=3, elinewidth=1.2, zorder=4,
+                    label="people (95% CI)")
+        # direct labels to the right of the last point, nudged apart
+        ends = [("people", people[-1], INK), ("ALCOVE", alc[-1], ALCOVE),
+                ("RULEX", rlx[-1], RULEX), ("real words", lexv[-1], MUTED)]
+        ys = spread([e[1] for e in ends], 0.055)
+        for (lab, y0, col), y in zip(ends, ys):
+            ax.plot([3.08, 3.3], [y0, y], color=AXIS, lw=0.6)
+            ax.text(3.35, y, lab, va="center", fontsize=7.8, color=INK2)
+        ax.set_xticks(xs)
+        ax.set_xticklabels(ticks, fontsize=8)
+        ax.set_xlim(-0.3, 3.95)
+        ax.set_ylim(-0.02, 1.02)
+        ax.set_title(title, loc="left")
+        # the titles state ALCOVE's /k/-vs-/h/ order; fail loudly if the data disagree
+        assert (alc[2] > alc[1]) == (wt == "token"), "ALCOVE /k/-vs-/h/ order changed"
+    axes[0].set_ylabel("P(-ler)")
+    handles, labels = axes[1].get_legend_handles_labels()
+    order = [3, 2, 1, 0]
+    fig.legend([handles[i] for i in order],
+               ["people (95% CI)", "ALCOVE", "RULEX", "real -at words, counted as the panel"],
+               ncol=4, loc="upper left", bbox_to_anchor=(0.06, 1.0), fontsize=8.5)
+    fig.suptitle("People put /k/ above /h/, as token frequency does. Token-trained ALCOVE "
+                 "follows that order; RULEX gives almost no -ler on /h/ or /k/", x=0.06, ha="left", y=1.07,
+                 fontsize=11)
+    fig.text(0.06, -0.03, "People: %d native speakers, mean of per-participant rates. Models: "
+             "5,000-word vocabularies, mean over learners (ALCOVE 20, RULEX 100). Stages 13-15."
+             % n_people, color=MUTED, fontsize=7.5)
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
+    save(fig, "fig6_main_result")
+
+
 def main():
     print("figures:")
     fig1()
@@ -321,6 +394,7 @@ def main():
     fig3()
     fig4()
     fig5()
+    fig6()
 
 
 if __name__ == "__main__":
