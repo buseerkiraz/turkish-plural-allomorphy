@@ -5,8 +5,7 @@
 Stage 13 found that the human ordering across cue levels disagrees with the
 lexicon: people put the dorsal level ABOVE /h/, the type counts put /h/ above
 dorsal. This stage tests the obvious explanation. The type count treats saat and
-cemaat as one item each; a speaker hears saat 125,739 times in the corpus and
-menfaat a handful. If speakers track experience rather than dictionary entries,
+cemaat as one item each; a speaker hears saat far more often than menfaat. If speakers track experience rather than dictionary entries,
 the token-weighted rate is the one to compare against.
 
     type rate  = exceptions / items in the class
@@ -15,9 +14,19 @@ the token-weighted rate is the one to compare against.
 Why this matters for the model contest, beyond the descriptive fit. ALCOVE
 accumulates exemplar traces with exposure and is frequency-sensitive by
 construction. RULEX stores a rule plus a list of memorised exceptions and has no
-representation of how often an item was met. So if the token-weighted rate fits
-people better than the type-weighted rate, that is evidence for a mechanism
-ALCOVE has and RULEX lacks, independent of the response profiles.
+representation of how often an item was met, but how often an item is PRESENTED
+still changes what it learns: Stage 15 shows token presentation lets a frequent
+exception (saat) survive, raising RULEX's hiatus P(-ler) from .10 to .82. What
+RULEX cannot produce under any presentation is the graded middle of the
+profile. The model-level test is Stage 15; this stage is the lexical one.
+
+Definitions shared with the rest of the pipeline (training_data.py), so the
+lexical rates here are the ones the models are compared against:
+  cue levels   the segment before -at of the nonce items: hiatus {a}, /h/ {h},
+               velar dorsal {k}, no cue {s, m, r}. Words with any other segment
+               before -at are not part of any tested level and are left out.
+  tokens       training_data.corpus_tokens: bare form plus plural forms in both
+               harmony series, the count the models were trained with.
 
 It also runs against Albright & Hayes (2003), who found type frequency fitted
 English past tenses better than token frequency. Reporting a Turkish result in
@@ -27,9 +36,10 @@ a disagreement with them rather than quietly.
 A second comparison is run here too. Turkish orthography does not distinguish
 palatal /c/ from velar /k/, so a participant reading "teşakat" cannot tell which
 they are being shown, while the lexicon distinguishes them sharply. This stage
-reports the velar-only and all-dorsal rates separately, because the written
-survey cannot carry the contrast and the human figure may be an average over
-both readings.
+reports the velar-only, palatal-only and all-dorsal rates separately, because
+the written survey cannot carry the contrast and the human figure may be an
+average over both readings. The cue level itself is velar /k/ only, matching
+the nonce items.
 """
 import collections
 import math
@@ -38,6 +48,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C
+import training_data as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
@@ -46,45 +57,8 @@ FREQ = os.path.join(HERE, "..", "data", "tr_full.txt")
 LEVELS = ["hiatus", "/h/", "velar dorsal", "no cue"]
 
 
-def load_freq():
-    if not os.path.exists(FREQ):
-        sys.exit("FATAL: %s missing. Run Stage 00." % FREQ)
-    freq = {}
-    with open(FREQ, encoding="utf-8", errors="replace") as f:
-        for line in f:
-            p = line.split()
-            if len(p) == 2:
-                try:
-                    freq[p[0]] = int(p[1])
-                except ValueError:
-                    pass
-    return freq
-
-
 def tokens(lexeme, freq):
-    """Corpus tokens for a lexeme, summed over its inflected forms.
-
-    The bare form alone understates a noun's frequency badly in Turkish, where
-    most tokens are suffixed. Summing a small set of common case and plural
-    forms is crude but applies the same way to every item, so it cannot bias
-    one class against another.
-    """
-    base = freq.get(lexeme, 0)
-    for suf in ("ı", "i", "u", "ü", "ta", "te", "ta", "tan", "ten",
-                "lar", "ler", "ları", "leri", "ın", "in", "a", "e"):
-        base += freq.get(lexeme + suf, 0)
-    return base
-
-
-def level_of(row):
-    s = row["pre_final_v"]
-    if s == "a":
-        return "hiatus"
-    if s == "h":
-        return "/h/"
-    if s in C.DORSALS:
-        return "velar dorsal"
-    return "no cue"
+    return T.corpus_tokens(lexeme, freq)
 
 
 def rates(items, freq):
@@ -117,14 +91,25 @@ def main():
     human = {r["cue_level"]: float(r["human_all"]) for r in C.read_tsv(hum_path)}
     human_nl = {r["cue_level"]: float(r["human_no_linguistics"])
                 for r in C.read_tsv(hum_path)}
-    freq = load_freq()
+    if not os.path.exists(FREQ):
+        sys.exit("FATAL: %s missing. Run Stage 00." % FREQ)
+    freq = C.load_freq(FREQ)
+    segs = T.level_segments()
+    level_of = {seg: lv for lv, ss in segs.items() for seg in ss}
 
     print("STAGE 14 -- type frequency vs token frequency\n")
     print("  real /at/ words: %d" % len(at))
 
     by = collections.defaultdict(list)
+    untested = collections.Counter()
     for r in at:
-        by[level_of(r)].append(r)
+        lv = level_of.get(r["pre_final_v"])
+        if lv:
+            by[lv].append(r)
+        else:
+            untested[r["pre_final_v"] or "-"] += 1
+    print("  in the four tested levels: %d; other segments before -at, not tested: %d"
+          % (sum(len(v) for v in by.values()), sum(untested.values())))
 
     print("\n=== EXCEPTION RATE PER CUE LEVEL, TWO WAYS ===")
     print("  %-14s %6s %5s %10s %11s %11s %11s"
@@ -170,14 +155,15 @@ def main():
     print("  token frequency fits better overall, because on RMSD it does not.")
     print("  With four points and one word (saat, dikkat) dominating two of the")
     print("  classes, this is a direction to investigate, not a result to lean on.")
-    print("  A frequency-weighted ALCOVE run is the proper test.")
+    print("  Stage 15 runs the model-level test: ALCOVE and RULEX trained on tokens.")
 
     # --- the orthography problem ---------------------------------------
     print("\n=== PALATAL vs VELAR DORSALS ===")
-    dor = by["velar dorsal"]
+    dor = [r for r in at if r["pre_final_v"] in C.DORSALS]
     pal = [r for r in dor if r["pre_final_v"] in C.PALATAL_DORSAL]
     vel = [r for r in dor if r["pre_final_v"] in C.VELAR_DORSAL]
-    for name, sub in (("palatal (c, ɟ)", pal), ("velar (k, g)", vel), ("both", dor)):
+    for name, sub in (("palatal (c, ɟ)", pal), ("velar (k, g)", vel), ("all dorsals", dor),
+                      ("tested level: k", by["velar dorsal"])):
         tp, tk, n, e, tot = rates(sub, freq)
         print("  %-16s %3d types, %2d exceptions, type %5.1f%%, token %5.1f%%"
               % (name, n, e, tp, tk))
@@ -203,10 +189,10 @@ def main():
     C.write_tsv(os.path.join(OUT, "14_frequency_rates.tsv"), rows)
     print("\n  wrote output/14_frequency_rates.tsv")
 
-    print("\n  FOR STAGE 09: if token frequency fits better here, rerun ALCOVE with")
-    print("  token-weighted training and compare. RULEX cannot use frequency at")
-    print("  all, so that comparison isolates a mechanism one model has and the")
-    print("  other does not.")
+    print("\n  The model-level test is Stage 15: both models trained with type and token")
+    print("  presentation. Token presentation moves ALCOVE to the token order; it also")
+    print("  changes RULEX (hiatus .10 -> .82), which cannot produce the graded middle")
+    print("  of the profile under either scheme.")
 
 
 if __name__ == "__main__":

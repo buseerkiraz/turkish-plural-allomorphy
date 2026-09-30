@@ -30,6 +30,19 @@ AT_GROUPS = [("hiatus", "D2_onset_vowel"), ("/h/", "D3_onset_h"),
              ("dorsal", "D4_onset_dorsal"), ("none", None)]
 
 
+def corpus_tokens(lexeme, freq):
+    """Corpus frequency of a lexeme: the bare form plus its plural forms in both
+    harmony series (FREQ_FORMS), summed over spelling variants. This is THE
+    token count of the project: vocabulary sampling and token presentation
+    (Stages 09-15) and the type-vs-token rates (Stages 14-15) all use it.
+
+    Plural forms of both series are included so that the count cannot favour
+    either class. Case forms are left out; adding them (as an earlier Stage 14
+    did) would raise most counts, but it would change what the models were
+    trained on, so any such refinement has to change it here, for everyone."""
+    return sum(freq.get(v + s, 0) for v in C.orth_variants(lexeme) for s in FREQ_FORMS)
+
+
 def vec(r):
     return tuple(int(r[d]) for d in C.DIMENSION_NAMES)
 
@@ -98,8 +111,7 @@ def load():
     freq = C.load_freq(FREQ)
     words = []
     for r in rows:
-        f = sum(freq.get(v + s, 0) for v in C.orth_variants(r["lexeme"])
-                for s in FREQ_FORMS)
+        f = corpus_tokens(r["lexeme"], freq)
         words.append(dict(lexeme=r["lexeme"], vec=vec(r), y=int(r["plural_ler"]),
                           exc=int(r["is_exception"]), freq=f,
                           lateral=r["neighbourhood"] == "lateral",
@@ -120,12 +132,20 @@ def load():
     return words, heard, pool
 
 
-def lexicon_counts():
-    """{cue level: (N words, N taking -ler)} over Stage 03's cleaned /at/ class,
-    pooled over the segments each nonce level uses (the same source as Stage 07)."""
+def level_segments():
+    """{cue level: set of TELL segments before -at} as used by the nonce items
+    (Stage 07): hiatus {a}, /h/ {h}, velar dorsal {k}, no cue {s, m, ɾ}. The
+    definition every lexical comparison uses, so lexicon and nonce items match."""
     segs = collections.defaultdict(set)
     for r in C.read_tsv(os.path.join(OUT, "07_nonce_items.tsv")):
         segs[r["cue_level"]].add(r["transcription"][-3])   # segment before -at
+    return segs
+
+
+def lexicon_counts():
+    """{cue level: (N words, N taking -ler)} over Stage 03's cleaned /at/ class,
+    pooled over the segments each nonce level uses (level_segments)."""
+    segs = level_segments()
     at = C.read_tsv(os.path.join(OUT, "03_at_class.tsv"))
     counts = {}
     for lv in LEVELS:

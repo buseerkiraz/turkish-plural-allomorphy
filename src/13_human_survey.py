@@ -37,6 +37,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common as C
+import training_data as T
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "..", "output")
@@ -142,19 +143,24 @@ def main():
     def level_of(item):
         return LEVEL_BY_RIME[item[-3:]]
 
+    # Lexical -ler rate per level, pooled over the words of the level (shared
+    # definition, training_data.lexicon_rates). Averaging the per-item rates
+    # instead would weight "no cue" by ending (s 0%, m 0%, r 3.1% -> 1.0%) rather
+    # than by word (1 of 62 -> 1.6%).
+    lex_rate = T.lexicon_rates()
+
     print("\n=== P(-ler) BY CUE LEVEL ===")
     print("  %-14s %10s %9s %9s %9s" % ("cue level", "lexicon %", "all", "ling.", "no ling."))
     table = {}
     for lv in LEVELS:
         its = [i for i in items if level_of(i) == lv]
-        lex = [float(nonce[i]["lexical_exception_rate_pct"]) for i in its]
         cells = {}
         for g, idx in groups.items():
             vals = [scored[p][i] for p in idx for i in its if scored[p][i] is not None]
             cells[g] = rate(vals)
         table[lv] = cells
         print("  %-14s %9.1f%% %8.1f%% %8.1f%% %8.1f%%"
-              % (lv, sum(lex) / len(lex), cells["all"],
+              % (lv, lex_rate[lv], cells["all"],
                  cells.get("linguistics", float("nan")),
                  cells.get("no linguistics", float("nan"))))
 
@@ -169,9 +175,7 @@ def main():
     print("  the nonce design was rebuilt to avoid.")
 
     obs = [table[l]["all"] for l in cue_lv]
-    lex = [sum(float(nonce[i]["lexical_exception_rate_pct"])
-               for i in items if level_of(i) == l) /
-           len([i for i in items if level_of(i) == l]) for l in cue_lv]
+    lex = [lex_rate[l] for l in cue_lv]
     print("\n  ordering, humans:  %s" % " > ".join(
         l for _, l in sorted(zip(obs, cue_lv), reverse=True)))
     print("  ordering, lexicon: %s" % " > ".join(
@@ -235,10 +239,7 @@ def main():
     C.write_tsv(os.path.join(OUT, "13_human_responses.tsv"), long_rows)
     C.write_tsv(os.path.join(OUT, "13_human_profiles.tsv"), per_person)
     summary = [dict(cue_level=lv,
-                    lexical_type_rate="%.1f" % (sum(
-                        float(nonce[i]["lexical_exception_rate_pct"])
-                        for i in items if level_of(i) == lv) /
-                        len([i for i in items if level_of(i) == lv])),
+                    lexical_type_rate="%.1f" % lex_rate[lv],
                     human_all="%.1f" % table[lv]["all"],
                     human_linguistics="%.1f" % table[lv].get("linguistics", float("nan")),
                     human_no_linguistics="%.1f" % table[lv].get("no linguistics", float("nan")))
